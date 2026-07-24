@@ -1,0 +1,37 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and package manager caches
+**/node_modules/
+.pnpm-store/
+**/.pnpm-store/
+**/vendor/
+
+# Framework/runtime output
+**/.next/
+**/.turbo/
+**/dist/
+**/build/
+**/coverage/
+**/storage/logs/
+**/storage/framework/cache/
+**/storage/framework/sessions/
+**/storage/framework/views/
+**/storage/framework/testing/
+
+# Local databases and generated files
+backend/database/*.sqlite
+backend/database/*.sqlite-*
+*.log
+*.tsbuildinfo
+
+# Local IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Preserved nested repository metadata
+next-monorepo/.git.backup/
