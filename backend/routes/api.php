@@ -6,6 +6,8 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\StaffController;
 use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\LeaveController;
+use App\Http\Controllers\API\PayrollController;
+use App\Http\Controllers\API\ExpenseController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -39,6 +41,11 @@ Route::prefix('auth')->group(function () {
         Route::get('/leave/requests', [LeaveController::class, 'index']);
         Route::post('/leave/requests', [LeaveController::class, 'store']);
         Route::patch('/leave/requests/{leaveRequest}/status', [LeaveController::class, 'updateStatus']);
+        Route::get('/payroll', [PayrollController::class, 'index']);
+        Route::post('/payroll', [PayrollController::class, 'store']);
+        Route::get('/expenses', [ExpenseController::class, 'index']);
+        Route::post('/expenses', [ExpenseController::class, 'store']);
+        Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus']);
 
     });
 

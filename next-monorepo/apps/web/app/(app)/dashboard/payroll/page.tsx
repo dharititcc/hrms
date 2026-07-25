@@ -1,0 +1,1 @@
+import type { Metadata } from "next";import { PayrollModule } from "@/features/payroll/payroll-module";export const metadata:Metadata={title:"Payroll"};export default function PayrollPage(){return <PayrollModule/>}

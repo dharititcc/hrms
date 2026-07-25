@@ -149,6 +149,33 @@ POST  /api/auth/leave/requests
 PATCH /api/auth/leave/requests/{leaveRequest}/status
 ```
 
+## Phase 3: payroll and expenses
+
+Available dashboard modules:
+
+```text
+/dashboard/payroll
+/dashboard/expenses
+```
+
+Phase 3 currently includes:
+
+- Payroll periods and salary records
+- Basic salary, allowances, deductions, and net salary calculation
+- Staff expense submissions
+- Expense categories and dates
+- Expense approval and rejection workflow
+
+Phase 3 API endpoints:
+
+```text
+GET   /api/auth/payroll
+POST  /api/auth/payroll
+GET   /api/auth/expenses
+POST  /api/auth/expenses
+PATCH /api/auth/expenses/{expense}/status
+```
+
 ## Frontend routes
 
 ```text
