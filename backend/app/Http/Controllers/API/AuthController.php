@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -55,6 +56,15 @@ class AuthController extends Controller
     public function me(): JsonResponse
     {
         return response()->json(auth()->user());
+    }
+
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $emailChanged = $user->email !== $request->validated('email');
+        $user->update($request->validated() + ($emailChanged ? ['email_verified_at' => null] : []));
+
+        return response()->json($user->fresh());
     }
 
     public function sendVerificationNotification(Request $request): JsonResponse

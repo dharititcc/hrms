@@ -25,6 +25,7 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/me', [AuthController::class, 'me']);
+        Route::patch('/profile', [AuthController::class, 'updateProfile']);
 
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationNotification'])

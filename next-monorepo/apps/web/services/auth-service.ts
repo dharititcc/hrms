@@ -18,6 +18,10 @@ export const authService = {
     const { data } = await apiClient.get<User>("/auth/me")
     return data
   },
+  async updateProfile(input: { name: string; email: string }) {
+    const { data } = await apiClient.patch<User>("/auth/profile", input)
+    return data
+  },
   async logout() {
     await apiClient.post("/auth/logout")
   },

@@ -14,6 +14,7 @@ type AuthState = {
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (user: User) => void
 }
 
 function clearTokens() {
@@ -67,5 +68,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     try { await authService.logout() } catch { /* token is cleared locally even if the API is unavailable */ }
     clearTokens()
     set({ user: null, token: null, isAuthenticated: false, isLoading: false })
+  },
+  updateUser: (user) => {
+    const storage = window.localStorage.getItem("auth-token") ? window.localStorage : window.sessionStorage
+    storage.setItem("auth-user", JSON.stringify(user))
+    set({ user })
   },
 }))
