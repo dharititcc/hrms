@@ -119,6 +119,36 @@ PUT    /api/auth/staff/{staff}
 DELETE /api/auth/staff/{staff}
 ```
 
+## Phase 2: attendance and leave
+
+Available dashboard modules:
+
+```text
+/dashboard/attendance
+/dashboard/leave
+```
+
+Phase 2 currently includes:
+
+- Staff clock-in and clock-out tracking
+- Attendance history
+- Leave types with default annual allowances
+- Leave request submission
+- Leave request approval and rejection
+- Staff selection for operational actions
+
+Phase 2 API endpoints:
+
+```text
+GET   /api/auth/attendance
+POST  /api/auth/attendance/clock-in
+POST  /api/auth/attendance/{attendance}/clock-out
+GET   /api/auth/leave/types
+GET   /api/auth/leave/requests
+POST  /api/auth/leave/requests
+PATCH /api/auth/leave/requests/{leaveRequest}/status
+```
+
 ## Frontend routes
 
 ```text

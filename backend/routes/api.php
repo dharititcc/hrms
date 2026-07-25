@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\StaffController;
+use App\Http\Controllers\API\AttendanceController;
+use App\Http\Controllers\API\LeaveController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -29,6 +31,13 @@ Route::prefix('auth')->group(function () {
             ->middleware('throttle:6,1');
 
         Route::apiResource('staff', StaffController::class);
+        Route::get('/attendance', [AttendanceController::class, 'index']);
+        Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn']);
+        Route::post('/attendance/{attendance}/clock-out', [AttendanceController::class, 'clockOut']);
+        Route::get('/leave/types', [LeaveController::class, 'types']);
+        Route::get('/leave/requests', [LeaveController::class, 'index']);
+        Route::post('/leave/requests', [LeaveController::class, 'store']);
+        Route::patch('/leave/requests/{leaveRequest}/status', [LeaveController::class, 'updateStatus']);
 
     });
 
