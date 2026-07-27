@@ -1,4 +1,4 @@
-# Sample Project
+# HRMS
 
 Production-oriented SaaS foundation with a Laravel API backend and a Next.js frontend.
 
