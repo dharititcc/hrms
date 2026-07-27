@@ -7,8 +7,8 @@ import { AuthProvider } from "@/providers/auth-provider"
 
 export const metadata: Metadata = {
   title: {
-    default: "Nucleus",
-    template: "%s | Nucleus",
+    default: "HRMS",
+    template: "%s | HRMS",
   },
   description: "A focused workspace for modern teams.",
 }

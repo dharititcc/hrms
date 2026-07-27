@@ -29,8 +29,8 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
         );
 
         return (new MailMessage())
-            ->subject('Verify your Nucleus email address')
-            ->greeting('Welcome to Nucleus!')
+            ->subject('Verify your HRMS email address')
+            ->greeting('Welcome to HRMS!')
             ->line('Please verify your email address to finish setting up your account.')
             ->action('Verify email address', $verificationUrl)
             ->line('This link expires in 60 minutes.');
