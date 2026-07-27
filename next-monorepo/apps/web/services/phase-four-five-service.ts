@@ -1,0 +1,2 @@
+import { apiClient } from "@/lib/api-client"
+export const phaseFourFiveService={async get(path:string){const {data}=await apiClient.get<{data:unknown[]}>(`/auth/${path}`);return data.data},async create(path:string,input:Record<string,unknown>){const {data}=await apiClient.post<{data:unknown}>(`/auth/${path}`,input);return data.data},async report(){const {data}=await apiClient.get<Record<string,number>>('/auth/reports/summary');return data}}

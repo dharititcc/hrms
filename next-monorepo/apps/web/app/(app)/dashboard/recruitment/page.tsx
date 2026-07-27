@@ -1,0 +1,1 @@
+import type {Metadata} from "next";import {PhaseFourModule} from "@/features/phase-four/phase-four-module";export const metadata:Metadata={title:'Recruitment & performance'};export default function Page(){return <PhaseFourModule/>}

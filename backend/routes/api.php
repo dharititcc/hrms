@@ -8,6 +8,8 @@ use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\LeaveController;
 use App\Http\Controllers\API\PayrollController;
 use App\Http\Controllers\API\ExpenseController;
+use App\Http\Controllers\API\PhaseFourController;
+use App\Http\Controllers\API\PhaseFiveController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -46,6 +48,18 @@ Route::prefix('auth')->group(function () {
         Route::get('/expenses', [ExpenseController::class, 'index']);
         Route::post('/expenses', [ExpenseController::class, 'store']);
         Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus']);
+        Route::get('/recruitment/openings', [PhaseFourController::class, 'openings']);
+        Route::post('/recruitment/openings', [PhaseFourController::class, 'storeOpening']);
+        Route::get('/recruitment/candidates', [PhaseFourController::class, 'candidates']);
+        Route::post('/recruitment/candidates', [PhaseFourController::class, 'storeCandidate']);
+        Route::get('/performance/goals', [PhaseFourController::class, 'goals']);
+        Route::post('/performance/goals', [PhaseFourController::class, 'storeGoal']);
+        Route::get('/performance/reviews', [PhaseFourController::class, 'reviews']);
+        Route::get('/assets', [PhaseFiveController::class, 'assets']);
+        Route::post('/assets', [PhaseFiveController::class, 'storeAsset']);
+        Route::get('/announcements', [PhaseFiveController::class, 'announcements']);
+        Route::post('/announcements', [PhaseFiveController::class, 'storeAnnouncement']);
+        Route::get('/reports/summary', [PhaseFiveController::class, 'report']);
 
     });
 

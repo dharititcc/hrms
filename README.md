@@ -176,6 +176,29 @@ POST  /api/auth/expenses
 PATCH /api/auth/expenses/{expense}/status
 ```
 
+## Phase 4 and 5: people development and operations
+
+Dashboard modules:
+
+```text
+/dashboard/recruitment
+/dashboard/operations
+```
+
+Phase 4 includes recruitment openings, candidates, performance goals, and review storage. Phase 5 includes asset records, announcements, audit-log storage, and summary reporting.
+
+```text
+GET|POST /api/auth/recruitment/openings
+GET|POST /api/auth/recruitment/candidates
+GET|POST /api/auth/performance/goals
+GET      /api/auth/performance/reviews
+GET|POST /api/auth/assets
+GET|POST /api/auth/announcements
+GET      /api/auth/reports/summary
+```
+
+Advanced follow-ups include review-cycle automation, file attachments, tax integrations, PDF reports, and notification delivery.
+
 ## Frontend routes
 
 ```text
