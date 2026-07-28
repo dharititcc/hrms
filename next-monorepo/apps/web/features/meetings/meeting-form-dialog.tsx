@@ -223,8 +223,11 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
                           />
                           <span>{person.name}</span>
                           {person.kind === "staff" && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground" title="No login account, so they will be invited by email and reply through a private link">
-                              email only
+                            <span
+                              className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground"
+                              title="Invited by email. They get the joining link and can attend and RSVP without signing in."
+                            >
+                              guest
                             </span>
                           )}
                           <span className="ml-auto truncate text-xs text-muted-foreground">{person.email}</span>
@@ -236,7 +239,8 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Team members without a login account are invited by email and reply through a private link. Give them an account from the Staff page if they need full access.
+              Everyone selected is invited and can attend. Guests get the joining link by email and RSVP through a private link, without signing in.
+              Invite them from the Staff page if you also want them to have an account.
             </p>
           </fieldset>
 
