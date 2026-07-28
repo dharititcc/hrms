@@ -40,6 +40,7 @@ class TaskResource extends JsonResource
                 'name' => $tag->name,
                 'color' => $tag->color,
             ])->all()),
+            'related_label' => $this->whenLoaded('related', fn () => $this->related?->name ?? $this->related?->subject ?? null),
             'created_by' => $this->created_by,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

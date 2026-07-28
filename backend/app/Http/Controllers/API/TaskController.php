@@ -36,6 +36,13 @@ class TaskController extends Controller
         return (new TaskResource($task))->response()->setStatusCode(201);
     }
 
+    public function show(Request $request, Task $task): TaskResource
+    {
+        $this->authorize('view', $task);
+
+        return new TaskResource($task->load(['assignees', 'tags', 'related']));
+    }
+
     public function update(UpdateTaskRequest $request, Task $task): TaskResource
     {
         $this->authorize('update', $task);

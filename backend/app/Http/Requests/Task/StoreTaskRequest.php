@@ -5,7 +5,7 @@ namespace App\Http\Requests\Task;
 use App\Enums\RepeatFrequency;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
-use App\Models\Staff;
+use App\Support\WorkspaceUsers;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -45,11 +45,6 @@ class StoreTaskRequest extends FormRequest
     /** @return list<int> */
     protected function workspaceUserIds(): array
     {
-        $ownerId = $this->user()->workspaceOwnerId();
-
-        return [
-            $ownerId,
-            ...Staff::query()->where('owner_id', $ownerId)->whereNotNull('user_id')->pluck('user_id')->all(),
-        ];
+        return WorkspaceUsers::idsFor($this->user()->workspaceOwnerId());
     }
 }

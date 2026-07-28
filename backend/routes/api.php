@@ -15,7 +15,10 @@ use App\Http\Controllers\API\AttachmentController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
+use App\Http\Controllers\API\TaskChecklistController;
+use App\Http\Controllers\API\TaskCommentController;
 use App\Http\Controllers\API\TaskController;
+use App\Http\Controllers\API\TaskTimeEntryController;
 use App\Http\Controllers\API\WorkspaceUserController;
 
 Route::get('/user', function (Request $request) {
@@ -87,11 +90,30 @@ Route::prefix('auth')->group(function () {
         Route::apiResource('projects', ProjectController::class);
         Route::get('/projects/{project}/tasks', [TaskController::class, 'indexForProject']);
         Route::post('/projects/{project}/tasks', [TaskController::class, 'storeForProject']);
+        Route::get('/tasks/{task}', [TaskController::class, 'show']);
         Route::put('/tasks/{task}', [TaskController::class, 'update']);
         Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
         Route::patch('/tasks/{task}/archive', [TaskController::class, 'archive']);
         Route::patch('/tasks/{task}/restore', [TaskController::class, 'restore']);
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
+
+        Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index']);
+        Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store']);
+        Route::put('/comments/{comment}', [TaskCommentController::class, 'update']);
+        Route::delete('/comments/{comment}', [TaskCommentController::class, 'destroy']);
+
+        Route::get('/tasks/{task}/checklist', [TaskChecklistController::class, 'index']);
+        Route::post('/tasks/{task}/checklist', [TaskChecklistController::class, 'store']);
+        Route::patch('/tasks/{task}/checklist/reorder', [TaskChecklistController::class, 'reorder']);
+        Route::patch('/checklist-items/{item}', [TaskChecklistController::class, 'update']);
+        Route::delete('/checklist-items/{item}', [TaskChecklistController::class, 'destroy']);
+
+        Route::get('/time-entries/running', [TaskTimeEntryController::class, 'running']);
+        Route::get('/tasks/{task}/time-entries', [TaskTimeEntryController::class, 'index']);
+        Route::post('/tasks/{task}/time-entries', [TaskTimeEntryController::class, 'store']);
+        Route::post('/tasks/{task}/timer/start', [TaskTimeEntryController::class, 'start']);
+        Route::post('/tasks/{task}/timer/stop', [TaskTimeEntryController::class, 'stop']);
+        Route::delete('/time-entries/{entry}', [TaskTimeEntryController::class, 'destroy']);
 
     });
 
