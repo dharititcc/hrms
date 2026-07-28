@@ -12,6 +12,7 @@ use App\Http\Controllers\API\PhaseFourController;
 use App\Http\Controllers\API\PhaseFiveController;
 use App\Http\Controllers\API\ActivityLogController;
 use App\Http\Controllers\API\AttachmentController;
+use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
@@ -91,6 +92,7 @@ Route::prefix('auth')->group(function () {
         Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
         Route::get('/activity', [ActivityLogController::class, 'index']);
         Route::get('/workspace/users', [WorkspaceUserController::class, 'index']);
 
