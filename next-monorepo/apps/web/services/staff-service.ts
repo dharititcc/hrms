@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type { Staff, StaffInput, StaffListResponse, StaffRole, StaffStatus } from "@/types/staff"
 
-export type StaffFilters = { search?: string; status?: StaffStatus | "all"; role?: StaffRole | "all" }
+export type StaffFilters = { search?: string; status?: StaffStatus | "all"; role?: StaffRole | "all"; page?: number; per_page?: number }
 
 export const staffService = {
   async list(filters: StaffFilters = {}) {
