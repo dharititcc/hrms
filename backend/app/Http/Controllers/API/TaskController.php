@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Enums\TaskStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Task\IndexTaskRequest;
 use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
@@ -17,6 +18,15 @@ use Illuminate\Validation\Rule;
 class TaskController extends Controller
 {
     public function __construct(private readonly TaskService $service) {}
+
+    public function index(IndexTaskRequest $request): JsonResponse
+    {
+        $this->authorize('viewAny', Task::class);
+
+        $tasks = $this->service->list($request->user()->workspaceOwnerId(), $request->validated());
+
+        return TaskResource::collection($tasks)->response();
+    }
 
     /** Board for one project. Tasks relate to projects polymorphically. */
     public function indexForProject(Request $request, Project $project): JsonResponse

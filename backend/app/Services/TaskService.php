@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
 use App\Repositories\TaskRepository;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,11 @@ use Illuminate\Support\Facades\DB;
 class TaskService
 {
     public function __construct(private readonly TaskRepository $repository) {}
+
+    public function list(int $ownerId, array $filters = []): LengthAwarePaginator
+    {
+        return $this->repository->paginateForOwner($ownerId, $filters);
+    }
 
     public function listForRelated(Model $related): Collection
     {

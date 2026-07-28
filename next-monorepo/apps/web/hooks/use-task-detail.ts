@@ -2,7 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { taskService } from "@/services/task-service"
-import type { ManualTimeInput, TaskChecklistItem } from "@/types/task"
+import type { ManualTimeInput, TaskChecklistItem, TaskFilters } from "@/types/task"
+
+export function useTasks(filters: TaskFilters) {
+  return useQuery({ queryKey: ["tasks", filters], queryFn: () => taskService.list(filters), placeholderData: (previous) => previous })
+}
 
 export function useTask(taskId: number) {
   return useQuery({ queryKey: ["task", taskId], queryFn: () => taskService.get(taskId), enabled: Number.isFinite(taskId) })

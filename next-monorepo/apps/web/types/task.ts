@@ -1,4 +1,29 @@
-import type { TaskAssignee } from "@/types/project"
+import type { ProjectTask, TaskAssignee, TaskPriority, TaskStatus } from "@/types/project"
+
+export type TaskSort = "subject" | "due_date" | "start_date" | "created_at" | "updated_at" | "priority" | "status"
+export type DueFilter = "overdue" | "today" | "week" | "none"
+
+export type TaskListItem = ProjectTask & { related_label?: string | null }
+
+export type TaskListResponse = {
+  data: TaskListItem[]
+  meta: { current_page: number; last_page: number; per_page: number; total: number }
+}
+
+export type TaskFilters = {
+  search?: string
+  status?: TaskStatus[]
+  priority?: TaskPriority[]
+  assignee_id?: number
+  unassigned?: boolean
+  mine?: boolean
+  due?: DueFilter
+  archived?: boolean
+  sort?: TaskSort
+  direction?: "asc" | "desc"
+  page?: number
+  per_page?: number
+}
 
 export type TaskComment = {
   id: number

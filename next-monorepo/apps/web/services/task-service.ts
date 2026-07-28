@@ -1,8 +1,23 @@
 import { apiClient } from "@/lib/api-client"
 import type { ProjectTask } from "@/types/project"
-import type { ManualTimeInput, TaskChecklistItem, TaskComment, TaskTimeEntry, TaskTimeEntryList } from "@/types/task"
+import type { ManualTimeInput, TaskChecklistItem, TaskComment, TaskFilters, TaskListResponse, TaskTimeEntry, TaskTimeEntryList } from "@/types/task"
 
 export const taskService = {
+  async list(filters: TaskFilters = {}) {
+    const { data } = await apiClient.get<TaskListResponse>("/auth/tasks", {
+      params: {
+        ...filters,
+        // Laravel reads repeated keys as arrays; axios serialises them as
+        // status[]=a&status[]=b which the request class accepts.
+        status: filters.status?.length ? filters.status : undefined,
+        priority: filters.priority?.length ? filters.priority : undefined,
+        unassigned: filters.unassigned ? 1 : undefined,
+        mine: filters.mine ? 1 : undefined,
+        archived: filters.archived ? 1 : undefined,
+      },
+    })
+    return data
+  },
   async get(taskId: number) {
     const { data } = await apiClient.get<{ data: ProjectTask & { related_label?: string | null } }>(`/auth/tasks/${taskId}`)
     return data.data

@@ -90,6 +90,7 @@ Route::prefix('auth')->group(function () {
         Route::apiResource('projects', ProjectController::class);
         Route::get('/projects/{project}/tasks', [TaskController::class, 'indexForProject']);
         Route::post('/projects/{project}/tasks', [TaskController::class, 'storeForProject']);
+        Route::get('/tasks', [TaskController::class, 'index']);
         Route::get('/tasks/{task}', [TaskController::class, 'show']);
         Route::put('/tasks/{task}', [TaskController::class, 'update']);
         Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
