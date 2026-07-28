@@ -27,7 +27,7 @@ class StoreProjectTaskRequest extends FormRequest
             'staff_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('staff', 'id')->where('owner_id', $this->user()->id),
+                Rule::exists('staff', 'id')->where('owner_id', $this->user()->workspaceOwnerId()),
             ],
         ];
     }

@@ -20,7 +20,7 @@ class StoreStaffRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('staff', 'email')->where('owner_id', $this->user()->id)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('staff', 'email')->where('owner_id', $this->user()->workspaceOwnerId())],
             'phone' => ['nullable', 'string', 'max:40'],
             'role' => ['required', Rule::enum(StaffRole::class)],
             'status' => ['required', Rule::enum(StaffStatus::class)],

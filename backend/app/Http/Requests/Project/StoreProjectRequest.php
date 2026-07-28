@@ -28,7 +28,7 @@ class StoreProjectRequest extends FormRequest
             'member_ids' => ['nullable', 'array'],
             'member_ids.*' => [
                 'integer',
-                Rule::exists('staff', 'id')->where('owner_id', $this->user()->id),
+                Rule::exists('staff', 'id')->where('owner_id', $this->user()->workspaceOwnerId()),
             ],
         ];
     }

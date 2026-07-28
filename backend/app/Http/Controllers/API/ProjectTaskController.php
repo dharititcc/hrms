@@ -29,7 +29,7 @@ class ProjectTaskController extends Controller
     {
         $this->authorize('update', $project);
 
-        return (new ProjectTaskResource($this->service->create($request->user()->id, $project, $request->validated())))
+        return (new ProjectTaskResource($this->service->create($request->user()->workspaceOwnerId(), $project, $request->validated())))
             ->response()
             ->setStatusCode(201);
     }

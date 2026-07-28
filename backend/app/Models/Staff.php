@@ -25,4 +25,10 @@ class Staff extends Model
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
+
+    /** The login account for this staff member, once invited. */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

@@ -18,7 +18,7 @@ class StaffController extends Controller
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Staff::class);
-        $staff = $this->service->list($request->user()->id, $request->validate([
+        $staff = $this->service->list($request->user()->workspaceOwnerId(), $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'role' => ['nullable', 'string'],
@@ -32,7 +32,7 @@ class StaffController extends Controller
     {
         $this->authorize('create', Staff::class);
 
-        return (new StaffResource($this->service->create($request->user()->id, $request->validated())))
+        return (new StaffResource($this->service->create($request->user()->workspaceOwnerId(), $request->validated())))
             ->response()
             ->setStatusCode(201);
     }

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\ProjectStatus;
 use App\Enums\TaskStatus;
+use App\Models\Concerns\HasAttachments;
+use App\Models\Concerns\LogsActivity;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Hidden(['owner_id'])]
 class Project extends Model
 {
+    use HasAttachments, LogsActivity;
+
     protected function casts(): array
     {
         return [

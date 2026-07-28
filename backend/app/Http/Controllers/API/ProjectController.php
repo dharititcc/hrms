@@ -18,7 +18,7 @@ class ProjectController extends Controller
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Project::class);
-        $projects = $this->service->list($request->user()->id, $request->validate([
+        $projects = $this->service->list($request->user()->workspaceOwnerId(), $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -31,7 +31,7 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
 
-        return (new ProjectResource($this->service->create($request->user()->id, $request->validated())))
+        return (new ProjectResource($this->service->create($request->user()->workspaceOwnerId(), $request->validated())))
             ->response()
             ->setStatusCode(201);
     }

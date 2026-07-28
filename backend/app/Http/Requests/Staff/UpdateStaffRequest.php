@@ -19,7 +19,7 @@ class UpdateStaffRequest extends StoreStaffRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('staff', 'email')->where('owner_id', $this->user()->id)->ignore($staffId)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('staff', 'email')->where('owner_id', $this->user()->workspaceOwnerId())->ignore($staffId)],
             'phone' => ['nullable', 'string', 'max:40'],
             'role' => ['required', Rule::enum(StaffRole::class)],
             'status' => ['required', Rule::enum(StaffStatus::class)],
