@@ -1,6 +1,7 @@
 "use client"
 
 import { CalendarDays, ChevronLeft, ChevronRight, Edit3, Plus, Trash2, Users } from "lucide-react"
+import Link from "next/link"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { TaskFormDialog } from "@/features/projects/task-form-dialog"
@@ -125,7 +126,7 @@ function TaskCard({ task, onMove, onEdit, onDelete }: { task: ProjectTask; onMov
       className="grid cursor-grab gap-2 rounded-xl border bg-background p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium">{task.subject}</p>
+        <Link href={`/dashboard/tasks/${task.id}`} className="text-sm font-medium hover:underline">{task.subject}</Link>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${taskPriorityStyles[task.priority]}`}>{taskPriorityLabels[task.priority]}</span>
       </div>
 
