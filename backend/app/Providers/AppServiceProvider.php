@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Enums\Ability;
+use App\Services\Meetings\ManualMeetingLinkProvider;
+use App\Services\Meetings\MeetingLinkProvider;
 use App\Support\WorkspaceRecords;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
@@ -15,7 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Swap this binding for a Google-backed provider once OAuth credentials
+        // are configured; nothing else needs to change.
+        $this->app->bind(MeetingLinkProvider::class, ManualMeetingLinkProvider::class);
     }
 
     /**

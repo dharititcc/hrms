@@ -8,6 +8,7 @@ use App\Models\Candidate;
 use App\Models\Expense;
 use App\Models\JobOpening;
 use App\Models\LeaveRequest;
+use App\Models\Meeting;
 use App\Models\Project;
 use App\Models\Staff;
 use App\Models\Task;
@@ -33,6 +34,7 @@ final class WorkspaceRecords
     {
         return [
             'task' => Task::class,
+            'meeting' => Meeting::class,
             'project' => Project::class,
             'staff' => Staff::class,
             'expense' => Expense::class,
