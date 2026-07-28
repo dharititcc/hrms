@@ -27,6 +27,10 @@ export function useProjectMutations() {
   return { create, update, remove }
 }
 
+export function useWorkspaceUsers() {
+  return useQuery({ queryKey: ["workspace-users"], queryFn: () => projectService.workspaceUsers(), staleTime: 5 * 60 * 1000 })
+}
+
 export function useProjectTasks(projectId: number) {
   return useQuery({
     queryKey: ["project-tasks", projectId],

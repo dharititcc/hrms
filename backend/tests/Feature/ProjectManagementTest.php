@@ -47,16 +47,17 @@ class ProjectManagementTest extends TestCase
         $project = Project::query()->where('owner_id', $user->id)->firstOrFail();
 
         $task = $this->postJson("/api/auth/projects/{$project->id}/tasks", [
-            'title' => 'Draft the sitemap',
-            'status' => 'todo',
+            'subject' => 'Draft the sitemap',
+            'status' => 'pending',
             'priority' => 'high',
-            'staff_id' => $staff->id,
+            'assignee_ids' => [$user->id],
             'due_date' => '2026-08-15',
         ]);
 
         $task->assertCreated()
-            ->assertJsonPath('data.status', 'todo')
-            ->assertJsonPath('data.assignee_name', 'Grace Hopper');
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.related_type', 'project')
+            ->assertJsonPath('data.assignees.0.id', $user->id);
 
         $taskId = $task->json('data.id');
 
@@ -66,7 +67,7 @@ class ProjectManagementTest extends TestCase
             ->assertJsonPath('data.status', 'in_progress');
 
         // Progress counts roll up on the project.
-        $this->patchJson("/api/auth/tasks/{$taskId}/status", ['status' => 'done'])->assertOk();
+        $this->patchJson("/api/auth/tasks/{$taskId}/status", ['status' => 'completed'])->assertOk();
         $this->getJson("/api/auth/projects/{$project->id}")
             ->assertOk()
             ->assertJsonPath('data.tasks_total', 1)

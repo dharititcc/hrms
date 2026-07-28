@@ -15,7 +15,8 @@ use App\Http\Controllers\API\AttachmentController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
-use App\Http\Controllers\API\ProjectTaskController;
+use App\Http\Controllers\API\TaskController;
+use App\Http\Controllers\API\WorkspaceUserController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -76,6 +77,7 @@ Route::prefix('auth')->group(function () {
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
         Route::get('/activity', [ActivityLogController::class, 'index']);
+        Route::get('/workspace/users', [WorkspaceUserController::class, 'index']);
 
         Route::get('/attachments', [AttachmentController::class, 'index']);
         Route::post('/attachments', [AttachmentController::class, 'store']);
@@ -83,11 +85,13 @@ Route::prefix('auth')->group(function () {
         Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy']);
 
         Route::apiResource('projects', ProjectController::class);
-        Route::get('/projects/{project}/tasks', [ProjectTaskController::class, 'index']);
-        Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store']);
-        Route::put('/tasks/{task}', [ProjectTaskController::class, 'update']);
-        Route::patch('/tasks/{task}/status', [ProjectTaskController::class, 'updateStatus']);
-        Route::delete('/tasks/{task}', [ProjectTaskController::class, 'destroy']);
+        Route::get('/projects/{project}/tasks', [TaskController::class, 'indexForProject']);
+        Route::post('/projects/{project}/tasks', [TaskController::class, 'storeForProject']);
+        Route::put('/tasks/{task}', [TaskController::class, 'update']);
+        Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
+        Route::patch('/tasks/{task}/archive', [TaskController::class, 'archive']);
+        Route::patch('/tasks/{task}/restore', [TaskController::class, 'restore']);
+        Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
 
     });
 

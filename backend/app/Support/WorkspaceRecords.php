@@ -9,8 +9,9 @@ use App\Models\Expense;
 use App\Models\JobOpening;
 use App\Models\LeaveRequest;
 use App\Models\Project;
-use App\Models\ProjectTask;
 use App\Models\Staff;
+use App\Models\Task;
+use App\Models\TaskComment;
 use App\Models\User;
 
 /**
@@ -31,8 +32,8 @@ final class WorkspaceRecords
     public static function map(): array
     {
         return [
+            'task' => Task::class,
             'project' => Project::class,
-            'project_task' => ProjectTask::class,
             'staff' => Staff::class,
             'expense' => Expense::class,
             'asset' => Asset::class,
@@ -57,6 +58,13 @@ final class WorkspaceRecords
     /** @return array<string, class-string> */
     public static function morphMap(): array
     {
-        return [...self::map(), 'user' => User::class];
+        return [
+            ...self::map(),
+            // Not workspace-resolvable on their own, but Eloquent must map them:
+            // User backs the polymorphic notifications table, and TaskComment
+            // carries attachments while being scoped through its parent task.
+            'user' => User::class,
+            'task_comment' => TaskComment::class,
+        ];
     }
 }

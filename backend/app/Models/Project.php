@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable(['owner_id', 'name', 'client', 'description', 'status', 'start_date', 'end_date', 'budget'])]
 #[Hidden(['owner_id'])]
@@ -39,14 +39,15 @@ class Project extends Model
         return $this->belongsToMany(Staff::class, 'project_staff');
     }
 
-    public function tasks(): HasMany
+    /** Tasks are related polymorphically, so a project is one of many possible targets. */
+    public function tasks(): MorphMany
     {
-        return $this->hasMany(ProjectTask::class);
+        return $this->morphMany(Task::class, 'related');
     }
 
     /** Completed tasks only — used for progress counts via withCount(). */
-    public function doneTasks(): HasMany
+    public function doneTasks(): MorphMany
     {
-        return $this->hasMany(ProjectTask::class)->where('status', TaskStatus::Done);
+        return $this->morphMany(Task::class, 'related')->where('status', TaskStatus::Completed);
     }
 }

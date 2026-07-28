@@ -22,14 +22,24 @@ export const projectSchema = z
 
 export type ProjectFormValues = z.infer<typeof projectSchema>
 
-export const taskSchema = z.object({
-  title: z.string().trim().min(2, "Enter a task title"),
-  description: z.string().max(5000, "Description is too long").optional(),
-  status: z.enum(["todo", "in_progress", "done"]),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
-  due_date: z.string().optional(),
-  /** Held as a string because the select emits strings; "" means unassigned. */
-  staff_id: z.string().optional(),
-})
+export const taskSchema = z
+  .object({
+    subject: z.string().trim().min(2, "Enter a task subject"),
+    description: z.string().max(20000, "Description is too long").optional(),
+    status: z.enum(["pending", "in_progress", "review", "completed", "cancelled", "on_hold"]),
+    priority: z.enum(["low", "medium", "high", "urgent"]),
+    is_billable: z.boolean().optional(),
+    estimated_hours: z
+      .string()
+      .optional()
+      .refine((value) => !value || (!Number.isNaN(Number(value)) && Number(value) >= 0), "Enter a valid number of hours"),
+    start_date: z.string().optional(),
+    due_date: z.string().optional(),
+    assignee_ids: z.array(z.number()).optional(),
+  })
+  .refine((values) => !values.start_date || !values.due_date || values.due_date >= values.start_date, {
+    message: "Due date cannot be before the start date",
+    path: ["due_date"],
+  })
 
 export type TaskFormValues = z.infer<typeof taskSchema>

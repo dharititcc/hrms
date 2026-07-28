@@ -17,13 +17,16 @@ export const projectStatusStyles: Record<ProjectStatus, string> = {
 }
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
-  todo: "To do",
+  pending: "Pending",
   in_progress: "In progress",
-  done: "Done",
+  review: "Review",
+  completed: "Completed",
+  on_hold: "On hold",
+  cancelled: "Cancelled",
 }
 
 /** Column order for the board, left to right. */
-export const taskStatusOrder: TaskStatus[] = ["todo", "in_progress", "done"]
+export const taskStatusOrder: TaskStatus[] = ["pending", "in_progress", "review", "completed", "on_hold", "cancelled"]
 
 export const taskPriorityLabels: Record<TaskPriority, string> = {
   low: "Low",

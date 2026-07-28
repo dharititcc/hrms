@@ -9,31 +9,34 @@ import { FormField } from "@/components/ui/form-fields"
 import { SelectField } from "@/components/ui/select-field"
 import { taskPriorityLabels, taskStatusLabels, taskStatusOrder } from "@/features/projects/labels"
 import { taskSchema, type TaskFormValues } from "@/features/projects/schemas"
-import { useProjectTaskMutations } from "@/hooks/use-projects"
+import { useProjectTaskMutations, useWorkspaceUsers } from "@/hooks/use-projects"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { ProjectTask, TaskPriority, TaskStatus } from "@/types/project"
-import type { Staff } from "@/types/staff"
 
 const emptyValues = (task: ProjectTask | null | undefined, defaultStatus: TaskStatus): TaskFormValues => ({
-  title: task?.title ?? "",
+  subject: task?.subject ?? "",
   description: task?.description ?? "",
   status: task?.status ?? defaultStatus,
   priority: task?.priority ?? "medium",
+  is_billable: task?.is_billable ?? false,
+  estimated_hours: task?.estimated_hours ?? "",
+  start_date: task?.start_date ?? "",
   due_date: task?.due_date ?? "",
-  staff_id: task?.staff_id ? String(task.staff_id) : "",
+  assignee_ids: task?.assignees?.map((assignee) => assignee.id) ?? [],
 })
 
-export function TaskFormDialog({ projectId, members, task, defaultStatus, onClose }: {
+export function TaskFormDialog({ projectId, task, defaultStatus, onClose }: {
   projectId: number
-  members: Staff[]
   task?: ProjectTask | null
   defaultStatus: TaskStatus
   onClose: () => void
 }) {
   const { toast } = useToast()
   const { create, update } = useProjectTaskMutations(projectId)
+  const { data: users } = useWorkspaceUsers()
   const editing = Boolean(task)
+  const assignable = users ?? []
 
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -44,12 +47,15 @@ export function TaskFormDialog({ projectId, members, task, defaultStatus, onClos
 
   const onSubmit = async (values: TaskFormValues) => {
     const input = {
-      title: values.title,
+      subject: values.subject,
       description: values.description || null,
       status: values.status,
       priority: values.priority,
+      is_billable: values.is_billable ?? false,
+      estimated_hours: values.estimated_hours ? Number(values.estimated_hours) : null,
+      start_date: values.start_date || null,
       due_date: values.due_date || null,
-      staff_id: values.staff_id ? Number(values.staff_id) : null,
+      assignee_ids: values.assignee_ids ?? [],
     }
     try {
       if (task) await update.mutateAsync({ id: task.id, input })
@@ -73,7 +79,7 @@ export function TaskFormDialog({ projectId, members, task, defaultStatus, onClos
         </div>
 
         <form className="mt-6 grid gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-          <FormField label="Title" placeholder="Draft the sitemap" error={errors.title?.message} {...register("title")} />
+          <FormField label="Subject" placeholder="Draft the sitemap" error={errors.subject?.message} {...register("subject")} />
 
           <div className="grid gap-2">
             <label htmlFor="task-description" className="text-sm font-medium">Description</label>
@@ -92,7 +98,7 @@ export function TaskFormDialog({ projectId, members, task, defaultStatus, onClos
               name="status"
               control={control}
               render={({ field }) => (
-                <SelectField label="Column" value={field.value} onChange={field.onChange} options={taskStatusOrder.map((value) => ({ id: value, label: taskStatusLabels[value] }))} />
+                <SelectField label="Status" value={field.value} onChange={field.onChange} options={taskStatusOrder.map((value) => ({ id: value, label: taskStatusLabels[value] }))} />
               )}
             />
             <Controller
@@ -109,21 +115,51 @@ export function TaskFormDialog({ projectId, members, task, defaultStatus, onClos
             />
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Start date" type="date" error={errors.start_date?.message} {...register("start_date")} />
+            <FormField label="Due date" type="date" error={errors.due_date?.message} {...register("due_date")} />
+          </div>
+
+          <FormField label="Estimated hours" type="number" step="0.25" min="0" placeholder="Optional" error={errors.estimated_hours?.message} {...register("estimated_hours")} />
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="size-4 rounded border" {...register("is_billable")} />
+            Billable
+          </label>
+
           <Controller
-            name="staff_id"
+            name="assignee_ids"
             control={control}
             render={({ field }) => (
-              <SelectField
-                label="Assignee"
-                value={field.value ?? ""}
-                onChange={field.onChange}
-                options={[{ id: "", label: "Unassigned" }, ...members.map((member) => ({ id: String(member.id), label: member.name }))]}
-              />
+              <fieldset className="grid gap-2">
+                <legend className="text-sm font-medium">Assignees</legend>
+                {assignable.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No assignable users yet. Invite a staff member to give them an account.</p>
+                ) : (
+                  <div className="grid max-h-40 gap-1 overflow-y-auto rounded-lg border p-2">
+                    {assignable.map((user) => {
+                      const selected = field.value?.includes(user.id) ?? false
+                      return (
+                        <label key={user.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(event) => {
+                              const current = field.value ?? []
+                              field.onChange(event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))
+                            }}
+                            className="size-4 rounded border"
+                          />
+                          <span>{user.name}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">{user.email}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </fieldset>
             )}
           />
-          {members.length === 0 && <p className="-mt-2 text-xs text-muted-foreground">Add team members to this project to assign tasks.</p>}
-
-          <FormField label="Due date" type="date" error={errors.due_date?.message} {...register("due_date")} />
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" variant="outline" onPress={onClose}>Cancel</Button>

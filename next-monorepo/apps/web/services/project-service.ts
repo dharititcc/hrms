@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client"
-import type { Project, ProjectInput, ProjectListResponse, ProjectStatus, ProjectTask, ProjectTaskInput, TaskStatus } from "@/types/project"
+import type { Project, ProjectInput, ProjectListResponse, ProjectStatus, ProjectTask, ProjectTaskInput, TaskStatus, WorkspaceUser } from "@/types/project"
 
 export type ProjectFilters = { search?: string; status?: ProjectStatus | "all"; page?: number }
 
@@ -43,5 +43,14 @@ export const projectService = {
   },
   async removeTask(taskId: number) {
     await apiClient.delete(`/auth/tasks/${taskId}`)
+  },
+  async archiveTask(taskId: number, archived: boolean) {
+    const { data } = await apiClient.patch<{ data: ProjectTask }>(`/auth/tasks/${taskId}/${archived ? "archive" : "restore"}`)
+    return data.data
+  },
+  /** Users who can be assigned work: the owner plus invited staff. */
+  async workspaceUsers() {
+    const { data } = await apiClient.get<{ data: WorkspaceUser[] }>("/auth/workspace/users")
+    return data.data
   },
 }
