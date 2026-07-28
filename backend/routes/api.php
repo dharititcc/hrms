@@ -12,6 +12,8 @@ use App\Http\Controllers\API\PhaseFourController;
 use App\Http\Controllers\API\PhaseFiveController;
 use App\Http\Controllers\API\ActivityLogController;
 use App\Http\Controllers\API\AttachmentController;
+use App\Http\Controllers\API\GuestRsvpController;
+use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
@@ -24,6 +26,16 @@ use App\Http\Controllers\API\WorkspaceUserController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+/*
+| Public invite endpoints. External guests have no account, so the unguessable
+| token is the only credential. Throttled because these are unauthenticated and
+| the token is the sole barrier to brute force.
+*/
+Route::middleware('throttle:20,1')->group(function () {
+    Route::get('/meetings/invite/{token}', [GuestRsvpController::class, 'show']);
+    Route::post('/meetings/invite/{token}/respond', [GuestRsvpController::class, 'respond']);
+});
 
 
 
@@ -90,6 +102,14 @@ Route::prefix('auth')->group(function () {
         Route::apiResource('projects', ProjectController::class);
         Route::get('/projects/{project}/tasks', [TaskController::class, 'indexForProject']);
         Route::post('/projects/{project}/tasks', [TaskController::class, 'storeForProject']);
+        Route::apiResource('meetings', MeetingController::class);
+        Route::patch('/meetings/{meeting}/reschedule', [MeetingController::class, 'reschedule']);
+        Route::patch('/meetings/{meeting}/cancel', [MeetingController::class, 'cancel']);
+        Route::post('/meetings/{meeting}/duplicate', [MeetingController::class, 'duplicate']);
+        Route::post('/meetings/{meeting}/invite', [MeetingController::class, 'invite']);
+        Route::post('/meetings/{meeting}/respond', [MeetingController::class, 'respond']);
+        Route::patch('/meetings/{meeting}/attendance', [MeetingController::class, 'attendance']);
+
         Route::get('/tasks', [TaskController::class, 'index']);
         Route::get('/tasks/{task}', [TaskController::class, 'show']);
         Route::put('/tasks/{task}', [TaskController::class, 'update']);
