@@ -93,6 +93,92 @@ export function groupByDay(meetings: Meeting[]): Map<string, Meeting[]> {
   return grouped
 }
 
+/** The viewer's own IANA zone, used as the default when scheduling. */
+export function browserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+}
+
+/**
+ * Every IANA zone the runtime knows about. Intl.supportedValuesOf is not in
+ * every browser, so fall back to a short list plus the viewer's own zone
+ * rather than leaving the field empty.
+ */
+export function supportedTimezones(): string[] {
+  const withSupport = Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] }
+
+  if (typeof withSupport.supportedValuesOf === "function") {
+    try {
+      return withSupport.supportedValuesOf("timeZone")
+    } catch {
+      // Falls through to the shortlist below.
+    }
+  }
+
+  const fallback = ["UTC", "Europe/London", "Europe/Paris", "Europe/Berlin", "America/New_York", "America/Chicago", "America/Los_Angeles", "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo", "Australia/Sydney"]
+
+  return [...new Set([browserTimezone(), ...fallback])].sort()
+}
+
+/** e.g. "Asia/Kolkata (GMT+5:30)" so the offset is visible when choosing. */
+export function timezoneLabel(zone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, { timeZone: zone, timeZoneName: "shortOffset" }).formatToParts(new Date())
+    const offset = parts.find((part) => part.type === "timeZoneName")?.value
+
+    return offset ? `${zone.replace(/_/g, " ")} (${offset})` : zone.replace(/_/g, " ")
+  } catch {
+    return zone
+  }
+}
+
+/**
+ * Reads a datetime-local value as a wall-clock time in the given zone and
+ * returns the matching instant.
+ *
+ * Without this, "10:00" typed while scheduling a Tokyo meeting would be stored
+ * as 10:00 in the browser's zone, silently moving the meeting.
+ */
+export function zonedInputToInstant(value: string, timezone: string): string {
+  if (!value) return value
+
+  // Interpret the literal as UTC first, then correct by the zone's offset at
+  // that moment.
+  const asUtc = new Date(`${value}:00Z`)
+  const offsetMinutes = zoneOffsetMinutes(asUtc, timezone)
+
+  return new Date(asUtc.getTime() - offsetMinutes * 60_000).toISOString()
+}
+
+/** The inverse: an instant rendered as a datetime-local value in a zone. */
+export function instantToZonedInput(iso: string | undefined, timezone: string): string {
+  if (!iso) return ""
+
+  const date = new Date(iso)
+  const shifted = new Date(date.getTime() + zoneOffsetMinutes(date, timezone) * 60_000)
+  const pad = (value: number) => `${value}`.padStart(2, "0")
+
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}T${pad(shifted.getUTCHours())}:${pad(shifted.getUTCMinutes())}`
+}
+
+/** Minutes a zone is ahead of UTC at a given instant, honouring daylight saving. */
+function zoneOffsetMinutes(at: Date, timezone: string): number {
+  try {
+    const formatted = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    }).formatToParts(at)
+
+    const get = (type: string) => Number(formatted.find((part) => part.type === type)?.value ?? 0)
+    const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"), get("second"))
+
+    return Math.round((asUtc - at.getTime()) / 60_000)
+  } catch {
+    return 0
+  }
+}
+
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
 }

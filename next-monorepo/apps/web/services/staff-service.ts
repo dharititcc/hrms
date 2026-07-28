@@ -19,4 +19,13 @@ export const staffService = {
   async remove(id: number) {
     await apiClient.delete(`/auth/staff/${id}`)
   },
+  /** Creates a login account and emails a set-password link. */
+  async invite(id: number) {
+    const { data } = await apiClient.post<{ data: Staff }>(`/auth/staff/${id}/invite`)
+    return data.data
+  },
+  /** Unlinks the account, returning them to a directory-only record. */
+  async revokeAccess(id: number) {
+    await apiClient.delete(`/auth/staff/${id}/invite`)
+  },
 }

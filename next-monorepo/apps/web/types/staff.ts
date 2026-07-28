@@ -8,6 +8,8 @@ export type Staff = {
   phone: string | null
   role: StaffRole
   status: StaffStatus
+  /** True once invited and linked to a login account. */
+  has_account: boolean
   created_at: string
   updated_at: string
 }

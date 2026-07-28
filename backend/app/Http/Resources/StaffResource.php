@@ -17,6 +17,9 @@ class StaffResource extends JsonResource
             'phone' => $this->phone,
             'role' => $this->role->value,
             'status' => $this->status->value,
+            // Whether this staff member has a login account, and can therefore
+            // be assigned tasks or invited to meetings.
+            'has_account' => $this->user_id !== null,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

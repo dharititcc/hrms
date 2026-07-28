@@ -6,6 +6,7 @@ export const meetingSchema = z
     agenda: z.string().max(20000, "Agenda is too long").optional(),
     description: z.string().max(20000, "Description is too long").optional(),
     type: z.enum(["google_meet", "zoom", "teams", "offline"]),
+    timezone: z.string().min(1, "Choose a timezone"),
     starts_at: z.string().min(1, "Choose a start time"),
     ends_at: z.string().min(1, "Choose an end time"),
     meeting_link: z.union([z.url("Enter a valid URL"), z.literal("")]).optional(),

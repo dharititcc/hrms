@@ -1,13 +1,14 @@
 "use client"
 
 import { X } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@workspace/ui/components/button"
 import { FormField } from "@/components/ui/form-fields"
 import { SelectField } from "@/components/ui/select-field"
 import { meetingTypeLabels } from "@/features/meetings/labels"
+import { browserTimezone, instantToZonedInput, supportedTimezones, timezoneLabel, zonedInputToInstant } from "@/features/meetings/calendar-utils"
 import { meetingSchema, parseGuestEmails, type MeetingFormValues } from "@/features/meetings/schemas"
 import { useMeetingMutations } from "@/hooks/use-meetings"
 import { useWorkspaceUsers } from "@/hooks/use-projects"
@@ -15,27 +16,26 @@ import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Meeting, MeetingType } from "@/types/meeting"
 
-/** Converts an ISO instant into the value a datetime-local input expects. */
-function toLocalInput(iso: string | undefined): string {
-  if (!iso) return ""
-  const date = new Date(iso)
-  const pad = (value: number) => `${value}`.padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
+const emptyValues = (meeting?: Meeting | null): MeetingFormValues => {
+  // Existing meetings are edited in the zone they were scheduled in, so the
+  // times on screen match what the organiser originally chose.
+  const timezone = meeting?.timezone ?? browserTimezone()
 
-const emptyValues = (meeting?: Meeting | null): MeetingFormValues => ({
+  return {
   title: meeting?.title ?? "",
   agenda: meeting?.agenda ?? "",
   description: meeting?.description ?? "",
   type: meeting?.type ?? "google_meet",
-  starts_at: toLocalInput(meeting?.starts_at),
-  ends_at: toLocalInput(meeting?.ends_at),
+  timezone,
+  starts_at: instantToZonedInput(meeting?.starts_at, timezone),
+  ends_at: instantToZonedInput(meeting?.ends_at, timezone),
   meeting_link: meeting?.meeting_link ?? "",
   location: meeting?.location ?? "",
   reminder_minutes: meeting?.reminder_minutes != null ? String(meeting.reminder_minutes) : "",
   participant_ids: meeting?.participants?.map((participant) => participant.user_id) ?? [],
   guest_emails: meeting?.guests?.map((guest) => guest.email).join(", ") ?? "",
-})
+  }
+}
 
 export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | null; onClose: () => void }) {
   const { toast } = useToast()
@@ -43,6 +43,8 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
   const { data: users } = useWorkspaceUsers()
   const editing = Boolean(meeting)
   const assignable = users ?? []
+  // Computed once: the IANA list is long and never changes during a session.
+  const [timezones] = useState(supportedTimezones)
 
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
@@ -61,10 +63,11 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
       agenda: values.agenda || null,
       description: values.description || null,
       type: values.type,
-      // datetime-local has no zone, so treat it as local and send an instant.
-      starts_at: new Date(values.starts_at).toISOString(),
-      ends_at: new Date(values.ends_at).toISOString(),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      // The typed time is wall-clock in the chosen zone, not the browser's, so
+      // it is converted with that zone's offset before being sent as an instant.
+      starts_at: zonedInputToInstant(values.starts_at, values.timezone),
+      ends_at: zonedInputToInstant(values.ends_at, values.timezone),
+      timezone: values.timezone,
       meeting_link: values.meeting_link || null,
       location: values.location || null,
       reminder_minutes: values.reminder_minutes ? Number(values.reminder_minutes) : null,
@@ -120,6 +123,21 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
               />
             )}
           />
+
+          <div className="grid gap-2">
+            <label htmlFor="meeting-timezone" className="text-sm font-medium">Timezone</label>
+            <select
+              id="meeting-timezone"
+              className="h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/20"
+              {...register("timezone")}
+            >
+              {timezones.map((zone) => <option key={zone} value={zone}>{timezoneLabel(zone)}</option>)}
+            </select>
+            {errors.timezone && <p className="text-xs text-destructive">{errors.timezone.message}</p>}
+            <p className="text-xs text-muted-foreground">
+              The times below are read in this zone. Attendees see the meeting in their own local time.
+            </p>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Starts" type="datetime-local" error={errors.starts_at?.message} {...register("starts_at")} />
