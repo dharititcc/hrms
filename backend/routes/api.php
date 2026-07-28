@@ -16,6 +16,7 @@ use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\PermissionController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\TaskChecklistController;
@@ -59,30 +60,36 @@ Route::prefix('auth')->group(function () {
             ->middleware('throttle:6,1');
 
         Route::apiResource('staff', StaffController::class);
-        Route::get('/attendance', [AttendanceController::class, 'index']);
-        Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn']);
-        Route::post('/attendance/{attendance}/clock-out', [AttendanceController::class, 'clockOut']);
-        Route::get('/leave/types', [LeaveController::class, 'types']);
-        Route::get('/leave/requests', [LeaveController::class, 'index']);
-        Route::post('/leave/requests', [LeaveController::class, 'store']);
-        Route::patch('/leave/requests/{leaveRequest}/status', [LeaveController::class, 'updateStatus']);
-        Route::get('/payroll', [PayrollController::class, 'index']);
-        Route::post('/payroll', [PayrollController::class, 'store']);
-        Route::get('/expenses', [ExpenseController::class, 'index']);
-        Route::post('/expenses', [ExpenseController::class, 'store']);
-        Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus']);
-        Route::get('/recruitment/openings', [PhaseFourController::class, 'openings']);
-        Route::post('/recruitment/openings', [PhaseFourController::class, 'storeOpening']);
-        Route::get('/recruitment/candidates', [PhaseFourController::class, 'candidates']);
-        Route::post('/recruitment/candidates', [PhaseFourController::class, 'storeCandidate']);
-        Route::get('/performance/goals', [PhaseFourController::class, 'goals']);
-        Route::post('/performance/goals', [PhaseFourController::class, 'storeGoal']);
-        Route::get('/performance/reviews', [PhaseFourController::class, 'reviews']);
-        Route::get('/assets', [PhaseFiveController::class, 'assets']);
-        Route::post('/assets', [PhaseFiveController::class, 'storeAsset']);
-        Route::get('/announcements', [PhaseFiveController::class, 'announcements']);
-        Route::post('/announcements', [PhaseFiveController::class, 'storeAnnouncement']);
-        Route::get('/reports/summary', [PhaseFiveController::class, 'report']);
+        /*
+        | These modules predate the policy layer and their controllers only
+        | check tenancy, so permission is enforced here with can: middleware
+        | against the gates registered in AppServiceProvider. Approving a
+        | request is a separate permission from editing it.
+        */
+        Route::get('/attendance', [AttendanceController::class, 'index'])->middleware('can:attendance.view');
+        Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn'])->middleware('can:attendance.create');
+        Route::post('/attendance/{attendance}/clock-out', [AttendanceController::class, 'clockOut'])->middleware('can:attendance.create');
+        Route::get('/leave/types', [LeaveController::class, 'types'])->middleware('can:leave.view');
+        Route::get('/leave/requests', [LeaveController::class, 'index'])->middleware('can:leave.view');
+        Route::post('/leave/requests', [LeaveController::class, 'store'])->middleware('can:leave.create');
+        Route::patch('/leave/requests/{leaveRequest}/status', [LeaveController::class, 'updateStatus'])->middleware('can:leave.approve');
+        Route::get('/payroll', [PayrollController::class, 'index'])->middleware('can:payroll.view');
+        Route::post('/payroll', [PayrollController::class, 'store'])->middleware('can:payroll.create');
+        Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('can:expenses.view');
+        Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('can:expenses.create');
+        Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus'])->middleware('can:expenses.approve');
+        Route::get('/recruitment/openings', [PhaseFourController::class, 'openings'])->middleware('can:recruitment.view');
+        Route::post('/recruitment/openings', [PhaseFourController::class, 'storeOpening'])->middleware('can:recruitment.create');
+        Route::get('/recruitment/candidates', [PhaseFourController::class, 'candidates'])->middleware('can:recruitment.view');
+        Route::post('/recruitment/candidates', [PhaseFourController::class, 'storeCandidate'])->middleware('can:recruitment.create');
+        Route::get('/performance/goals', [PhaseFourController::class, 'goals'])->middleware('can:performance.view');
+        Route::post('/performance/goals', [PhaseFourController::class, 'storeGoal'])->middleware('can:performance.create');
+        Route::get('/performance/reviews', [PhaseFourController::class, 'reviews'])->middleware('can:performance.view');
+        Route::get('/assets', [PhaseFiveController::class, 'assets'])->middleware('can:assets.view');
+        Route::post('/assets', [PhaseFiveController::class, 'storeAsset'])->middleware('can:assets.create');
+        Route::get('/announcements', [PhaseFiveController::class, 'announcements'])->middleware('can:announcements.view');
+        Route::post('/announcements', [PhaseFiveController::class, 'storeAnnouncement'])->middleware('can:announcements.create');
+        Route::get('/reports/summary', [PhaseFiveController::class, 'report'])->middleware('can:reports.view');
 
         Route::post('/staff/{staff}/invite', [StaffInvitationController::class, 'store']);
         Route::delete('/staff/{staff}/invite', [StaffInvitationController::class, 'destroy']);
@@ -92,6 +99,7 @@ Route::prefix('auth')->group(function () {
         Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
+        Route::get('/permissions', [PermissionController::class, 'index']);
         Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
         Route::get('/activity', [ActivityLogController::class, 'index']);
         Route::get('/workspace/users', [WorkspaceUserController::class, 'index']);

@@ -2,7 +2,8 @@
 
 namespace App\Policies;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Policies\Concerns\AuthorizesWorkspaceAccess;
@@ -13,17 +14,17 @@ class MeetingPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAbility(Ability::View);
+        return $user->hasPermission(Module::Meetings, Action::View);
     }
 
     public function view(User $user, Meeting $meeting): bool
     {
-        return $this->allowsInWorkspace($user, $meeting->owner_id, Ability::View);
+        return $this->allowsInWorkspace($user, $meeting->owner_id, Module::Meetings, Action::View);
     }
 
     public function create(User $user): bool
     {
-        return $user->hasAbility(Ability::Create);
+        return $user->hasPermission(Module::Meetings, Action::Create);
     }
 
     /** The host and organiser can always manage their own meeting. */
@@ -34,15 +35,14 @@ class MeetingPolicy
         }
 
         return in_array($user->id, [$meeting->host_id, $meeting->organizer_id], strict: true)
-            || $user->hasAbility(Ability::Edit);
+            || $user->hasPermission(Module::Meetings, Action::Edit);
     }
 
     public function delete(User $user, Meeting $meeting): bool
     {
-        return $this->allowsInWorkspace($user, $meeting->owner_id, Ability::Delete);
+        return $this->allowsInWorkspace($user, $meeting->owner_id, Module::Meetings, Action::Delete);
     }
 
-    /** Inviting someone to a meeting is an assignment-shaped action. */
     public function invite(User $user, Meeting $meeting): bool
     {
         if ($meeting->owner_id !== $user->workspaceOwnerId()) {
@@ -50,12 +50,12 @@ class MeetingPolicy
         }
 
         return in_array($user->id, [$meeting->host_id, $meeting->organizer_id], strict: true)
-            || $user->hasAbility(Ability::Assign);
+            || $user->hasPermission(Module::Meetings, Action::Assign);
     }
 
-    /** Anyone in the workspace who can see the meeting may answer for themselves. */
+    /** Anyone who can see the meeting may answer for themselves. */
     public function respond(User $user, Meeting $meeting): bool
     {
-        return $this->allowsInWorkspace($user, $meeting->owner_id, Ability::View);
+        return $this->allowsInWorkspace($user, $meeting->owner_id, Module::Meetings, Action::View);
     }
 }

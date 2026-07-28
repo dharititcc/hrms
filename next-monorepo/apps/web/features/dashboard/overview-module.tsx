@@ -5,7 +5,6 @@ import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { useDashboardStats } from "@/hooks/use-dashboard"
 import { useAuthStore } from "@/store/auth-store"
-import type { DashboardStats } from "@/types/dashboard"
 
 export function OverviewModule() {
   const { data: stats, isLoading, isError, refetch } = useDashboardStats()
@@ -20,6 +19,15 @@ export function OverviewModule() {
     )
   }
 
+  // The API omits whole sections the caller has no permission for, so every
+  // panel below is conditional rather than assumed present.
+  const tasks = stats?.tasks
+  const meetings = stats?.meetings
+  const people = stats?.people
+  const projects = stats?.projects
+  const activity = stats?.recent_activity
+  const nothingVisible = !isLoading && !tasks && !meetings && !people && !projects && !activity
+
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
       <div>
@@ -30,80 +38,103 @@ export function OverviewModule() {
         <p className="mt-2 text-sm text-muted-foreground">Here’s what needs your attention.</p>
       </div>
 
+      {nothingVisible && (
+        <div className="rounded-2xl border bg-background p-8 text-center">
+          <p className="font-medium">Nothing to show yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Your role doesn’t include access to these areas.</p>
+        </div>
+      )}
+
       {/* Aimed at this person specifically, rather than workspace totals. */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="My open tasks" value={stats?.tasks.mine} loading={isLoading} icon={<CheckSquare className="size-5" />} href="/dashboard/tasks" />
-        <StatCard label="Overdue" value={stats?.tasks.overdue} loading={isLoading} icon={<AlertTriangle className="size-5" />} href="/dashboard/tasks" tone={stats?.tasks.overdue ? "danger" : undefined} />
-        <StatCard label="Due today" value={stats?.tasks.due_today} loading={isLoading} icon={<CalendarClock className="size-5" />} href="/dashboard/tasks" tone={stats?.tasks.due_today ? "warning" : undefined} />
-        <StatCard label="Awaiting my reply" value={stats?.meetings.awaiting_my_reply} loading={isLoading} icon={<Inbox className="size-5" />} href="/dashboard/meetings" tone={stats?.meetings.awaiting_my_reply ? "warning" : undefined} />
-      </section>
+      {(isLoading || tasks || meetings) && (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {(isLoading || tasks) && (
+            <>
+              <StatCard label="My open tasks" value={tasks?.mine} loading={isLoading} icon={<CheckSquare className="size-5" />} href="/dashboard/tasks" />
+              <StatCard label="Overdue" value={tasks?.overdue} loading={isLoading} icon={<AlertTriangle className="size-5" />} href="/dashboard/tasks" tone={tasks?.overdue ? "danger" : undefined} />
+              <StatCard label="Due today" value={tasks?.due_today} loading={isLoading} icon={<CalendarClock className="size-5" />} href="/dashboard/tasks" tone={tasks?.due_today ? "warning" : undefined} />
+            </>
+          )}
+          {(isLoading || meetings) && (
+            <StatCard label="Awaiting my reply" value={meetings?.awaiting_my_reply} loading={isLoading} icon={<Inbox className="size-5" />} href="/dashboard/meetings" tone={meetings?.awaiting_my_reply ? "warning" : undefined} />
+          )}
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Panel title="Tasks" href="/dashboard/tasks" className="lg:col-span-2">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Metric label="Pending" value={stats?.tasks.pending} loading={isLoading} />
-            <Metric label="In progress" value={stats?.tasks.in_progress} loading={isLoading} />
-            <Metric label="In review" value={stats?.tasks.review} loading={isLoading} />
-            <Metric label="Completed" value={stats?.tasks.completed} loading={isLoading} />
-            <Metric label="Unassigned" value={stats?.tasks.unassigned} loading={isLoading} />
-            <Metric label="Total" value={stats?.tasks.total} loading={isLoading} />
-          </div>
-          {stats && stats.tasks.total > 0 && <CompletionBar stats={stats} />}
-        </Panel>
+        {(isLoading || tasks) && (
+          <Panel title="Tasks" href="/dashboard/tasks" className="lg:col-span-2">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Metric label="Pending" value={tasks?.pending} loading={isLoading} />
+              <Metric label="In progress" value={tasks?.in_progress} loading={isLoading} />
+              <Metric label="In review" value={tasks?.review} loading={isLoading} />
+              <Metric label="Completed" value={tasks?.completed} loading={isLoading} />
+              <Metric label="Unassigned" value={tasks?.unassigned} loading={isLoading} />
+              <Metric label="Total" value={tasks?.total} loading={isLoading} />
+            </div>
+            {tasks && tasks.total > 0 && <CompletionBar completed={tasks.completed} total={tasks.total} />}
+          </Panel>
+        )}
 
-        <Panel title="Meetings" href="/dashboard/meetings">
-          <div className="grid gap-3">
-            <Metric label="Today" value={stats?.meetings.today} loading={isLoading} />
-            <Metric label="This week" value={stats?.meetings.this_week} loading={isLoading} />
-            <Metric label="Upcoming" value={stats?.meetings.upcoming} loading={isLoading} />
-          </div>
-        </Panel>
+        {(isLoading || meetings) && (
+          <Panel title="Meetings" href="/dashboard/meetings">
+            <div className="grid gap-3">
+              <Metric label="Today" value={meetings?.today} loading={isLoading} />
+              <Metric label="This week" value={meetings?.this_week} loading={isLoading} />
+              <Metric label="Upcoming" value={meetings?.upcoming} loading={isLoading} />
+            </div>
+          </Panel>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Panel title="People" href="/dashboard/staff">
-          <div className="grid gap-3">
-            <Metric label="Staff" value={stats?.people.staff} loading={isLoading} />
-            <Metric label="Active" value={stats?.people.active} loading={isLoading} />
-            <Metric label="With accounts" value={stats?.people.with_accounts} loading={isLoading} />
-          </div>
-          {/* Staff without accounts cannot be assigned tasks, which is easy to miss. */}
-          {stats && stats.people.staff > stats.people.with_accounts && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              {stats.people.staff - stats.people.with_accounts} without an account cannot be assigned tasks.{" "}
-              <Link href="/dashboard/staff" className="text-primary hover:underline">Invite them</Link>.
-            </p>
-          )}
-        </Panel>
+        {people && (
+          <Panel title="People" href="/dashboard/staff">
+            <div className="grid gap-3">
+              <Metric label="Staff" value={people.staff} loading={false} />
+              <Metric label="Active" value={people.active} loading={false} />
+              <Metric label="With accounts" value={people.with_accounts} loading={false} />
+            </div>
+            {/* Staff without accounts cannot be assigned tasks, which is easy to miss. */}
+            {people.staff > people.with_accounts && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {people.staff - people.with_accounts} without an account cannot be assigned tasks.{" "}
+                <Link href="/dashboard/staff" className="text-primary hover:underline">Invite them</Link>.
+              </p>
+            )}
+          </Panel>
+        )}
 
-        <Panel title="Projects" href="/dashboard/projects">
-          <div className="grid gap-3">
-            <Metric label="Active" value={stats?.projects.active} loading={isLoading} />
-            <Metric label="Total" value={stats?.projects.total} loading={isLoading} />
-          </div>
-        </Panel>
+        {projects && (
+          <Panel title="Projects" href="/dashboard/projects">
+            <div className="grid gap-3">
+              <Metric label="Active" value={projects.active} loading={false} />
+              <Metric label="Total" value={projects.total} loading={false} />
+            </div>
+          </Panel>
+        )}
 
-        <Panel title="Recent activity">
-          {isLoading ? (
-            <div className="grid gap-2">{[1, 2, 3].map((row) => <div key={row} className="h-5 animate-pulse rounded bg-muted" />)}</div>
-          ) : (stats?.recent_activity.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing yet.</p>
-          ) : (
-            <ol className="grid gap-2 text-sm">
-              {(stats?.recent_activity ?? []).map((entry) => (
-                <li key={entry.id} className="flex items-baseline justify-between gap-2">
-                  <span className="truncate">
-                    <span className="text-muted-foreground">{entry.user_name ?? "Someone"}</span>{" "}
-                    {entry.action} {entry.entity.replace(/_/g, " ")}
-                  </span>
-                  <time className="shrink-0 text-xs text-muted-foreground" dateTime={entry.created_at}>
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </time>
-                </li>
-              ))}
-            </ol>
-          )}
-        </Panel>
+        {activity && (
+          <Panel title="Recent activity">
+            {activity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing yet.</p>
+            ) : (
+              <ol className="grid gap-2 text-sm">
+                {activity.map((entry) => (
+                  <li key={entry.id} className="flex items-baseline justify-between gap-2">
+                    <span className="truncate">
+                      <span className="text-muted-foreground">{entry.user_name ?? "Someone"}</span>{" "}
+                      {entry.action} {entry.entity.replace(/_/g, " ")}
+                    </span>
+                    <time className="shrink-0 text-xs text-muted-foreground" dateTime={entry.created_at}>
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </time>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Panel>
+        )}
       </div>
     </div>
   )
@@ -157,8 +188,8 @@ function Metric({ label, value, loading }: { label: string; value: number | unde
   )
 }
 
-function CompletionBar({ stats }: { stats: DashboardStats }) {
-  const percent = Math.round((stats.tasks.completed / stats.tasks.total) * 100)
+function CompletionBar({ completed, total }: { completed: number; total: number }) {
+  const percent = Math.round((completed / total) * 100)
 
   return (
     <div className="mt-4">

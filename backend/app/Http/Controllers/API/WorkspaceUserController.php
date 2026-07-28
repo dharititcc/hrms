@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Support\WorkspaceUsers;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,7 @@ class WorkspaceUserController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->hasAbility(Ability::View), 403);
+        abort_unless($request->user()->hasPermission(Module::Staff, Action::View), 403);
 
         $users = WorkspaceUsers::query($request->user()->workspaceOwnerId())
             ->orderBy('name')

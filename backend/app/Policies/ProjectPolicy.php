@@ -2,7 +2,8 @@
 
 namespace App\Policies;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Models\Project;
 use App\Models\User;
 use App\Policies\Concerns\AuthorizesWorkspaceAccess;
@@ -13,26 +14,26 @@ class ProjectPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAbility(Ability::View);
+        return $user->hasPermission(Module::Projects, Action::View);
     }
 
     public function view(User $user, Project $project): bool
     {
-        return $this->allowsInWorkspace($user, $project->owner_id, Ability::View);
+        return $this->allowsInWorkspace($user, $project->owner_id, Module::Projects, Action::View);
     }
 
     public function create(User $user): bool
     {
-        return $user->hasAbility(Ability::Create);
+        return $user->hasPermission(Module::Projects, Action::Create);
     }
 
     public function update(User $user, Project $project): bool
     {
-        return $this->allowsInWorkspace($user, $project->owner_id, Ability::Edit);
+        return $this->allowsInWorkspace($user, $project->owner_id, Module::Projects, Action::Edit);
     }
 
     public function delete(User $user, Project $project): bool
     {
-        return $this->allowsInWorkspace($user, $project->owner_id, Ability::Delete);
+        return $this->allowsInWorkspace($user, $project->owner_id, Module::Projects, Action::Delete);
     }
 }

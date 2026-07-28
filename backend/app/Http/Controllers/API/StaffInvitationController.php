@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StaffResource;
 use App\Models\Staff;
@@ -19,7 +20,7 @@ class StaffInvitationController extends Controller
         // Inviting grants workspace access, so it needs the assign ability
         // on top of the usual update check.
         $this->authorize('update', $staff);
-        abort_unless($request->user()->hasAbility(Ability::Assign), 403);
+        abort_unless($request->user()->hasPermission(Module::Staff, Action::Assign), 403);
 
         $this->service->invite($staff);
 
@@ -32,7 +33,7 @@ class StaffInvitationController extends Controller
     public function destroy(Request $request, Staff $staff): JsonResponse
     {
         $this->authorize('update', $staff);
-        abort_unless($request->user()->hasAbility(Ability::Assign), 403);
+        abort_unless($request->user()->hasPermission(Module::Staff, Action::Assign), 403);
 
         $this->service->revoke($staff);
 

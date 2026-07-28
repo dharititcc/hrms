@@ -1,5 +1,9 @@
+/**
+ * Sections are optional: the API omits any module the caller lacks permission
+ * for, so a Client receives no people or project figures at all.
+ */
 export type DashboardStats = {
-  tasks: {
+  tasks?: {
     total: number
     pending: number
     in_progress: number
@@ -11,15 +15,15 @@ export type DashboardStats = {
     mine: number
     unassigned: number
   }
-  meetings: {
+  meetings?: {
     today: number
     this_week: number
     upcoming: number
     awaiting_my_reply: number
   }
-  people: { staff: number; active: number; with_accounts: number }
-  projects: { total: number; active: number }
-  recent_activity: {
+  people?: { staff: number; active: number; with_accounts: number }
+  projects?: { total: number; active: number }
+  recent_activity?: {
     id: number
     action: string
     entity: string

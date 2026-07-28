@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Enums\Ability;
+use App\Support\PermissionRegistry;
 use App\Services\Meetings\ManualMeetingLinkProvider;
 use App\Services\Meetings\MeetingLinkProvider;
 use App\Support\WorkspaceRecords;
@@ -33,14 +33,18 @@ class AppServiceProvider extends ServiceProvider
         // table is polymorphic on notifiable.
         Relation::enforceMorphMap(WorkspaceRecords::morphMap());
 
-        // Ability gates for non-model checks, e.g. Gate::allows('export').
+        // Registers every module.action as a gate, so controllers can call
+        // $this->authorize('payroll.create') directly.
         //
-        // Deliberately no Gate::before bypass for manage-all: it would skip the
+        // Deliberately no Gate::before bypass for admins: it would skip the
         // workspace-ownership check inside every policy, letting one workspace
-        // owner reach another workspace's records. manage-all means "every
-        // ability within my own workspace" — policies still verify tenancy.
-        foreach (Ability::cases() as $ability) {
-            Gate::define($ability->value, fn ($user) => $user->hasAbility($ability));
+        // owner reach another workspace's records. Admin means "every
+        // permission within my own workspace" — policies still verify tenancy.
+        foreach (PermissionRegistry::all() as [$module, $action]) {
+            Gate::define(
+                "{$module->value}.{$action->value}",
+                fn ($user) => $user->hasPermission($module, $action),
+            );
         }
     }
 }

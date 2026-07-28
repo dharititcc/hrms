@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ActivityLogResource;
 use App\Models\AuditLog;
@@ -21,7 +22,7 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->hasAbility(Ability::View), 403);
+        abort_unless($request->user()->hasPermission(Module::Activity, Action::View), 403);
 
         $validated = $request->validate([
             'entity' => ['nullable', 'string', Rule::in(WorkspaceRecords::aliases())],

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\Action;
 use App\Enums\MeetingStatus;
+use App\Enums\Module;
 use App\Enums\TaskStatus;
 use App\Models\AuditLog;
 use App\Models\Meeting;
@@ -25,13 +27,15 @@ class DashboardService
         $ownerId = $user->workspaceOwnerId();
         $today = now()->toDateString();
 
-        return [
-            'tasks' => $this->taskStats($ownerId, $user->id, $today),
-            'meetings' => $this->meetingStats($ownerId, $user->id),
-            'people' => $this->peopleStats($ownerId),
-            'projects' => $this->projectStats($ownerId),
-            'recent_activity' => $this->recentActivity($ownerId),
-        ];
+        // Each section is omitted rather than zeroed when the caller lacks
+        // permission, so a Client is never shown staff or project figures.
+        return array_filter([
+            'tasks' => $user->hasPermission(Module::Tasks, Action::View) ? $this->taskStats($ownerId, $user->id, $today) : null,
+            'meetings' => $user->hasPermission(Module::Meetings, Action::View) ? $this->meetingStats($ownerId, $user->id) : null,
+            'people' => $user->hasPermission(Module::Staff, Action::View) ? $this->peopleStats($ownerId) : null,
+            'projects' => $user->hasPermission(Module::Projects, Action::View) ? $this->projectStats($ownerId) : null,
+            'recent_activity' => $user->hasPermission(Module::Activity, Action::View) ? $this->recentActivity($ownerId) : null,
+        ], fn ($section) => $section !== null);
     }
 
     private function taskStats(int $ownerId, int $userId, string $today): array

@@ -13,7 +13,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Enums\StaffRole;
 use App\Enums\WorkspaceRole;
 use App\Support\PermissionRegistry;
@@ -94,9 +95,21 @@ class User extends Authenticatable implements MustVerifyEmail
             : WorkspaceRole::fromStaffRole($role);
     }
 
-    public function hasAbility(Ability $ability): bool
+    /** Resource-scoped check: may this user perform $action on $module? */
+    public function hasPermission(Module $module, Action $action): bool
     {
-        return PermissionRegistry::allows($this->workspaceRole(), $ability);
+        return PermissionRegistry::allows($this->workspaceRole(), $module, $action);
+    }
+
+    public function isWorkspaceAdmin(): bool
+    {
+        return $this->workspaceRole() === WorkspaceRole::Admin;
+    }
+
+    /** @return list<string> flat "module.action" permissions */
+    public function permissions(): array
+    {
+        return PermissionRegistry::permissionsFor($this->workspaceRole());
     }
 
     public function isWorkspaceOwner(): bool

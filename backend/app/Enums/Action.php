@@ -2,19 +2,17 @@
 
 namespace App\Enums;
 
-/**
- * Granular abilities checked by policies. Kept as an enum rather than database
- * rows because the set is fixed by the product, not configured per install.
- */
-enum Ability: string
+enum Action: string
 {
     case View = 'view';
     case Create = 'create';
     case Edit = 'edit';
     case Delete = 'delete';
+    /** Give work to, or grant access to, somebody else. */
     case Assign = 'assign';
+    /** Decide on a request: leave, expenses. Distinct from editing it. */
+    case Approve = 'approve';
     case Comment = 'comment';
     case Upload = 'upload';
     case Export = 'export';
-    case ManageAll = 'manage-all';
 }

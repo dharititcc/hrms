@@ -2,7 +2,8 @@
 
 namespace App\Policies;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Models\Task;
 use App\Models\User;
 use App\Policies\Concerns\AuthorizesWorkspaceAccess;
@@ -13,32 +14,31 @@ class TaskPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->hasAbility(Ability::View);
+        return $user->hasPermission(Module::Tasks, Action::View);
     }
 
     public function view(User $user, Task $task): bool
     {
-        return $this->allowsInWorkspace($user, $task->owner_id, Ability::View);
+        return $this->allowsInWorkspace($user, $task->owner_id, Module::Tasks, Action::View);
     }
 
     public function create(User $user): bool
     {
-        return $user->hasAbility(Ability::Create);
+        return $user->hasPermission(Module::Tasks, Action::Create);
     }
 
     public function update(User $user, Task $task): bool
     {
-        return $this->allowsInWorkspace($user, $task->owner_id, Ability::Edit);
+        return $this->allowsInWorkspace($user, $task->owner_id, Module::Tasks, Action::Edit);
     }
 
     public function delete(User $user, Task $task): bool
     {
-        return $this->allowsInWorkspace($user, $task->owner_id, Ability::Delete);
+        return $this->allowsInWorkspace($user, $task->owner_id, Module::Tasks, Action::Delete);
     }
 
-    /** Changing who a task is assigned to is a separate ability. */
     public function assign(User $user, Task $task): bool
     {
-        return $this->allowsInWorkspace($user, $task->owner_id, Ability::Assign);
+        return $this->allowsInWorkspace($user, $task->owner_id, Module::Tasks, Action::Assign);
     }
 }

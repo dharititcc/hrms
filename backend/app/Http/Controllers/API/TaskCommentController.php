@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\Ability;
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Task\StoreTaskCommentRequest;
 use App\Http\Resources\TaskCommentResource;
@@ -28,7 +29,7 @@ class TaskCommentController extends Controller
         $this->authorize('view', $task);
         // Commenting is its own ability, so read-only roles such as Client can
         // still take part without being able to edit the task.
-        abort_unless($request->user()->hasAbility(Ability::Comment), 403);
+        abort_unless($request->user()->hasPermission(Module::Tasks, Action::Comment), 403);
 
         $comment = $this->service->create($task, $request->user(), $request->validated());
 
