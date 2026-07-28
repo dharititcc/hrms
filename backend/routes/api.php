@@ -10,6 +10,8 @@ use App\Http\Controllers\API\PayrollController;
 use App\Http\Controllers\API\ExpenseController;
 use App\Http\Controllers\API\PhaseFourController;
 use App\Http\Controllers\API\PhaseFiveController;
+use App\Http\Controllers\API\ProjectController;
+use App\Http\Controllers\API\ProjectTaskController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -60,6 +62,13 @@ Route::prefix('auth')->group(function () {
         Route::get('/announcements', [PhaseFiveController::class, 'announcements']);
         Route::post('/announcements', [PhaseFiveController::class, 'storeAnnouncement']);
         Route::get('/reports/summary', [PhaseFiveController::class, 'report']);
+
+        Route::apiResource('projects', ProjectController::class);
+        Route::get('/projects/{project}/tasks', [ProjectTaskController::class, 'index']);
+        Route::post('/projects/{project}/tasks', [ProjectTaskController::class, 'store']);
+        Route::put('/tasks/{task}', [ProjectTaskController::class, 'update']);
+        Route::patch('/tasks/{task}/status', [ProjectTaskController::class, 'updateStatus']);
+        Route::delete('/tasks/{task}', [ProjectTaskController::class, 'destroy']);
 
     });
 
