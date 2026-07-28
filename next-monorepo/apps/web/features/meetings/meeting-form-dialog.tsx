@@ -12,9 +12,33 @@ import { browserTimezone, instantToZonedInput, supportedTimezones, timezoneLabel
 import { meetingSchema, parseGuestEmails, type MeetingFormValues } from "@/features/meetings/schemas"
 import { useMeetingMutations } from "@/hooks/use-meetings"
 import { useWorkspaceUsers } from "@/hooks/use-projects"
+import { useStaff } from "@/hooks/use-staff"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Meeting, MeetingType } from "@/types/meeting"
+import type { Staff } from "@/types/staff"
+
+/**
+ * Combines selected account-less staff with any free-text addresses into one
+ * guest list, de-duplicated by email so a person invited both ways is invited
+ * once.
+ */
+function mergeGuests(values: MeetingFormValues, staff: Staff[]): { email: string; name?: string | null }[] {
+  const chosen = new Set(values.guest_staff_ids ?? [])
+  const fromStaff = staff
+    .filter((member) => chosen.has(member.id))
+    .map((member) => ({ email: member.email, name: member.name }))
+
+  const merged = [...fromStaff, ...parseGuestEmails(values.guest_emails)]
+  const seen = new Set<string>()
+
+  return merged.filter((guest) => {
+    const key = guest.email.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
 
 const emptyValues = (meeting?: Meeting | null): MeetingFormValues => {
   // Existing meetings are edited in the zone they were scheduled in, so the
@@ -33,6 +57,7 @@ const emptyValues = (meeting?: Meeting | null): MeetingFormValues => {
   location: meeting?.location ?? "",
   reminder_minutes: meeting?.reminder_minutes != null ? String(meeting.reminder_minutes) : "",
   participant_ids: meeting?.participants?.map((participant) => participant.user_id) ?? [],
+  guest_staff_ids: [],
   guest_emails: meeting?.guests?.map((guest) => guest.email).join(", ") ?? "",
   }
 }
@@ -41,10 +66,25 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
   const { toast } = useToast()
   const { create, update } = useMeetingMutations(meeting?.id)
   const { data: users } = useWorkspaceUsers()
+  const { data: staff } = useStaff({ status: "active", per_page: 100 })
   const editing = Boolean(meeting)
-  const assignable = users ?? []
   // Computed once: the IANA list is long and never changes during a session.
   const [timezones] = useState(supportedTimezones)
+
+  /*
+   * Anyone who can be invited, in one list.
+   *
+   * Users become participants and RSVP in-app. Staff without an account cannot
+   * sign in, so they are invited as email guests instead — a meeting invitation
+   * does not require an account, unlike a task assignment.
+   */
+  const knownEmails = new Set((users ?? []).map((user) => user.email.toLowerCase()))
+  const people: { kind: "user" | "staff"; id: number; name: string; email: string }[] = [
+    ...(users ?? []).map((user) => ({ kind: "user" as const, id: user.id, name: user.name, email: user.email })),
+    ...(staff?.data ?? [])
+      .filter((member) => !member.has_account && !knownEmails.has(member.email.toLowerCase()))
+      .map((member) => ({ kind: "staff" as const, id: member.id, name: member.name, email: member.email })),
+  ]
 
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
@@ -72,7 +112,7 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
       location: values.location || null,
       reminder_minutes: values.reminder_minutes ? Number(values.reminder_minutes) : null,
       participant_ids: values.participant_ids ?? [],
-      guests: parseGuestEmails(values.guest_emails),
+      guests: mergeGuests(values, staff?.data ?? []),
     }
 
     try {
@@ -157,39 +197,48 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
 
           <FormField label="Reminder (minutes before)" type="number" min="0" placeholder="Optional" error={errors.reminder_minutes?.message} {...register("reminder_minutes")} />
 
-          <Controller
-            name="participant_ids"
-            control={control}
-            render={({ field }) => (
-              <fieldset className="grid gap-2">
-                <legend className="text-sm font-medium">Participants</legend>
-                {assignable.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No colleagues with accounts yet. Invite staff to give them access.</p>
-                ) : (
-                  <div className="grid max-h-40 gap-1 overflow-y-auto rounded-lg border p-2">
-                    {assignable.map((user) => {
-                      const selected = field.value?.includes(user.id) ?? false
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">Participants</legend>
+            {people.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nobody to invite yet. Add staff members first.</p>
+            ) : (
+              <div className="grid max-h-48 gap-1 overflow-y-auto rounded-lg border p-2">
+                {people.map((person) => (
+                  <Controller
+                    key={`${person.kind}-${person.id}`}
+                    name={person.kind === "user" ? "participant_ids" : "guest_staff_ids"}
+                    control={control}
+                    render={({ field }) => {
+                      const selected = field.value?.includes(person.id) ?? false
                       return (
-                        <label key={user.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
                           <input
                             type="checkbox"
                             checked={selected}
                             onChange={(event) => {
                               const current = field.value ?? []
-                              field.onChange(event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))
+                              field.onChange(event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id))
                             }}
                             className="size-4 rounded border"
                           />
-                          <span>{user.name}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">{user.email}</span>
+                          <span>{person.name}</span>
+                          {person.kind === "staff" && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground" title="No login account, so they will be invited by email and reply through a private link">
+                              email only
+                            </span>
+                          )}
+                          <span className="ml-auto truncate text-xs text-muted-foreground">{person.email}</span>
                         </label>
                       )
-                    })}
-                  </div>
-                )}
-              </fieldset>
+                    }}
+                  />
+                ))}
+              </div>
             )}
-          />
+            <p className="text-xs text-muted-foreground">
+              Team members without a login account are invited by email and reply through a private link. Give them an account from the Staff page if they need full access.
+            </p>
+          </fieldset>
 
           <div className="grid gap-2">
             <label htmlFor="meeting-guests" className="text-sm font-medium">External guests</label>

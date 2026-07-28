@@ -13,6 +13,8 @@ export const meetingSchema = z
     location: z.string().max(255, "Location is too long").optional(),
     reminder_minutes: z.string().optional(),
     participant_ids: z.array(z.number()).optional(),
+    /** Staff without login accounts, invited by email as guests instead. */
+    guest_staff_ids: z.array(z.number()).optional(),
     guest_emails: z.string().optional(),
   })
   .refine((values) => !values.starts_at || !values.ends_at || values.ends_at > values.starts_at, {
