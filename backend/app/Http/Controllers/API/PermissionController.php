@@ -21,6 +21,9 @@ class PermissionController extends Controller
         return response()->json(['data' => [
             'role' => $request->user()->workspaceRole()->value,
             'is_workspace_owner' => $request->user()->isWorkspaceOwner(),
+            // Which employee record the caller is, so the UI can act for them
+            // without a second lookup. Null for the workspace owner.
+            'staff_id' => $request->user()->staffId(),
             'permissions' => $request->user()->permissions(),
             'modules' => array_map(fn (Module $module) => $module->value, Module::cases()),
             'actions' => array_map(fn (Action $action) => $action->value, Action::cases()),

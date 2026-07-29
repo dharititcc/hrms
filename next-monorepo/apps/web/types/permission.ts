@@ -17,6 +17,8 @@ export type Permission = `${PermissionModule}.${PermissionAction}`
 export type WorkspacePermissions = {
   role: "admin" | "manager" | "employee" | "client"
   is_workspace_owner: boolean
+  /** The caller's own employee record, or null for the workspace owner. */
+  staff_id: number | null
   permissions: Permission[]
   modules: PermissionModule[]
   actions: PermissionAction[]
