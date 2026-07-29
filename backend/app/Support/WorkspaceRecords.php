@@ -9,7 +9,9 @@ use App\Models\Expense;
 use App\Models\JobOpening;
 use App\Models\LeaveRequest;
 use App\Models\Meeting;
+use App\Models\PayrollRun;
 use App\Models\Project;
+use App\Models\SalarySlip;
 use App\Models\Staff;
 use App\Models\Task;
 use App\Models\TaskComment;
@@ -38,6 +40,8 @@ final class WorkspaceRecords
             'project' => Project::class,
             'staff' => Staff::class,
             'expense' => Expense::class,
+            'payroll_run' => PayrollRun::class,
+            'salary_slip' => SalarySlip::class,
             'asset' => Asset::class,
             'job_opening' => JobOpening::class,
             'candidate' => Candidate::class,

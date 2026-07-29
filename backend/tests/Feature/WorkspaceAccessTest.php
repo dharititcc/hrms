@@ -6,8 +6,9 @@ use App\Enums\Action;
 use App\Enums\Module;
 use App\Enums\WorkspaceRole;
 use App\Models\Expense;
-use App\Models\PayrollPeriod;
-use App\Models\PayrollRecord;
+use App\Enums\PayrollCountry;
+use App\Models\PayrollRun;
+use App\Models\SalarySlip;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\StaffInvitationService;
@@ -21,6 +22,8 @@ class WorkspaceAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    private int $otherSlipId = 0;
+
     private function staffFor(User $owner, string $role = 'member', string $email = 'member@example.com'): Staff
     {
         return Staff::create([
@@ -32,22 +35,26 @@ class WorkspaceAccessTest extends TestCase
         ]);
     }
 
-    private function payslipFor(User $owner, ?int $staffId): PayrollRecord
+    private function payslipFor(User $owner, ?int $staffId): SalarySlip
     {
-        $period = PayrollPeriod::create([
+        $run = PayrollRun::create([
             'owner_id' => $owner->id,
-            'name' => 'August',
-            'start_date' => now()->startOfMonth()->toDateString(),
-            'end_date' => now()->endOfMonth()->toDateString(),
+            'title' => 'August',
+            'country' => PayrollCountry::India,
+            'currency_code' => 'INR',
+            'period_start' => now()->startOfMonth()->toDateString(),
+            'period_end' => now()->endOfMonth()->toDateString(),
         ]);
 
-        return PayrollRecord::create([
+        return SalarySlip::create([
             'owner_id' => $owner->id,
-            'payroll_period_id' => $period->id,
+            'payroll_run_id' => $run->id,
             'staff_id' => $staffId,
+            'slip_number' => 'SLIP-'.uniqid(),
+            'country' => PayrollCountry::India,
+            'currency_code' => 'INR',
             'basic_salary' => 3000,
-            'allowances' => 0,
-            'deductions' => 0,
+            'gross_salary' => 3000,
             'net_salary' => 3000,
         ]);
     }
@@ -158,14 +165,15 @@ class WorkspaceAccessTest extends TestCase
 
         // Two payslips: the employee's own, and a colleague's.
         $ownPayslip = $this->payslipFor($owner, $employee->staffId());
-        $this->payslipFor($owner, $this->staffFor($owner, 'member', 'other@example.com')->id);
+        $this->otherSlipId = $this->payslipFor($owner, $this->staffFor($owner, 'member', 'other@example.com')->id)->id;
 
         Sanctum::actingAs($employee);
 
         // Row scoping: their own payslip only, never the colleague's.
         $payroll = $this->getJson('/api/auth/payroll')->assertOk();
         $payroll->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $ownPayslip->id);
-        $this->postJson('/api/auth/payroll', [])->assertForbidden();
+        // A colleague's slip stays out of reach even by id.
+        $this->getJson('/api/auth/payroll/'.$this->otherSlipId)->assertForbidden();
 
         // The claim they can see is their own; approving is not theirs to do.
         $this->getJson('/api/auth/expenses')->assertOk()->assertJsonCount(0, 'data');

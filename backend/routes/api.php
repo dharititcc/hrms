@@ -73,8 +73,10 @@ Route::prefix('auth')->group(function () {
         Route::get('/leave/requests', [LeaveController::class, 'index'])->middleware('can:leave.view');
         Route::post('/leave/requests', [LeaveController::class, 'store'])->middleware('can:leave.create');
         Route::patch('/leave/requests/{leaveRequest}/status', [LeaveController::class, 'updateStatus'])->middleware('can:leave.approve');
+        // Salary slips are read-only: they are produced by generating a payroll
+        // run from salary assignments, not by posting figures directly.
         Route::get('/payroll', [PayrollController::class, 'index'])->middleware('can:payroll.view');
-        Route::post('/payroll', [PayrollController::class, 'store'])->middleware('can:payroll.create');
+        Route::get('/payroll/{slip}', [PayrollController::class, 'show'])->middleware('can:payroll.view');
         Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('can:expenses.view');
         Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('can:expenses.create');
         Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus'])->middleware('can:expenses.approve');

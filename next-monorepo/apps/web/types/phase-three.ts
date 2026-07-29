@@ -1,2 +1,3 @@
-export type PayrollRecord = { id:number; period:string; staff_id:number; staff_name:string; basic_salary:string; allowances:string; deductions:string; net_salary:string }
+/** A salary slip issued by a payroll run. Replaces the retired PayrollRecord. */
+export type SalarySlip = { id:number; slip_number:string; payroll_run_id:number; period?:string|null; staff_id:number; staff_name?:string|null; country:string; currency_code:string; currency_symbol:string; basic_salary:string; total_earnings:string; total_deductions:string; employer_contributions:string; gross_salary:string; net_salary:string; paid_amount:string; outstanding:number; status:string }
 export type Expense = { id:number; staff_id:number; staff_name:string; title:string; category:string; amount:string; expense_date:string; reason:string|null; status:"pending"|"approved"|"rejected" }
