@@ -109,7 +109,9 @@ export function CheckInCard({ employeeId }: { employeeId: number | null }) {
             <Fact label="Checked out" value={formatRecordedTime(today?.check_out_at, today?.check_out, today?.timezone)} />
             <Fact
               label="Worked"
-              value={today?.check_out ? today.worked_hours : today?.check_in ? "In progress" : "—"}
+              value={today?.check_out
+                ? today.worked_hours
+                : today?.is_open ? `${formatMinutes(today.elapsed_minutes)} so far` : "—"}
             />
           </dl>
 

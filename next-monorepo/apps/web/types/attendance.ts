@@ -16,6 +16,10 @@ export type AttendanceRecord = {
   timezone: string | null
   status: AttendanceStatus
   work_mode: WorkMode
+  /** Checked in but not yet out, so nothing has been derived for it. */
+  is_open: boolean
+  /** Minutes since check-in on a day still running. */
+  elapsed_minutes: number
   worked_minutes: number
   worked_hours: string
   break_minutes: number

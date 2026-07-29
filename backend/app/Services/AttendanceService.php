@@ -71,7 +71,11 @@ class AttendanceService
                 'work_mode' => $mode,
                 'status' => $lateMinutes > 0 ? AttendanceStatus::Late : AttendanceStatus::Present,
                 'late_minutes' => $lateMinutes,
+                // The rules this day is judged under, kept with the day so a
+                // later recalculation cannot re-judge it under new settings.
                 'break_minutes' => $shift['break_minutes'],
+                'break_after_minutes' => (int) config('attendance.break_after_minutes'),
+                'overtime_after_minutes' => (int) config('attendance.overtime_after_minutes'),
                 'check_in_latitude' => $attributes['latitude'] ?? null,
                 'check_in_longitude' => $attributes['longitude'] ?? null,
                 'check_in_address' => $attributes['address'] ?? null,
@@ -105,24 +109,86 @@ class AttendanceService
         // not read as a negative day just because the viewer is elsewhere.
         $zone = $attendance->timezone ?? $this->zoneFrom($attributes);
         $now = now()->setTimezone($zone);
-        $worked = $this->workedMinutes($attendance, $now);
 
-        return DB::transaction(function () use ($attendance, $attributes, $now, $worked): Attendance {
+        return DB::transaction(function () use ($attendance, $attributes, $now): Attendance {
             $attendance->update([
                 'check_out' => $now->format('H:i:s'),
                 'check_out_at' => $now,
-                'worked_minutes' => $worked,
-                'overtime_minutes' => max(0, $worked - config('attendance.overtime_after_minutes')),
-                // A short day is a half day, unless they were already late,
-                // which is the more specific fact about the day.
-                'status' => $this->statusFor($attendance, $worked),
                 'check_out_latitude' => $attributes['latitude'] ?? null,
                 'check_out_longitude' => $attributes['longitude'] ?? null,
                 'check_out_address' => $attributes['address'] ?? null,
+                ...$this->derivedFigures($attendance, $now),
             ]);
 
             return $attendance->refresh();
         });
+    }
+
+    /**
+     * Corrects the times on a day and restates everything derived from them.
+     *
+     * This is what closes a day somebody forgot to check out of, and what
+     * fixes a check-in recorded at the wrong time. The result is marked manual
+     * and sent for approval, because a figure somebody typed should not carry
+     * the same weight as one the system captured.
+     *
+     * @param  array{check_in?: string|null, check_out?: string|null, notes?: string|null}  $attributes
+     */
+    public function correct(Attendance $attendance, User $actor, array $attributes): Attendance
+    {
+        $checkIn = $attributes['check_in'] ?? $attendance->check_in;
+        $checkOut = $attributes['check_out'] ?? $attendance->check_out;
+
+        if ($checkIn === null) {
+            throw ValidationException::withMessages(['check_in' => 'A day needs a check-in time before it can be corrected.']);
+        }
+
+        if ($checkOut !== null && $checkOut <= $checkIn) {
+            // Overnight shifts are not modelled; a check-out before the
+            // check-in is a typo rather than a night shift.
+            throw ValidationException::withMessages([
+                'check_out' => 'Check-out must be later than check-in.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($attendance, $actor, $attributes, $checkIn, $checkOut): Attendance {
+            $attendance->update([
+                'check_in' => $checkIn,
+                'check_out' => $checkOut,
+                'check_in_at' => $this->instantFor($attendance, $checkIn),
+                'check_out_at' => $checkOut === null ? null : $this->instantFor($attendance, $checkOut),
+                'notes' => $attributes['notes'] ?? $attendance->notes,
+                'is_manual' => true,
+                'requires_approval' => true,
+                'approved_by' => null,
+                'approved_at' => null,
+            ]);
+
+            $attendance->update($this->recalculated($attendance->refresh()));
+
+            return $attendance->refresh();
+        });
+    }
+
+    /**
+     * Every figure derived from the times on a record, recomputed.
+     *
+     * Uses the rules stored on the row rather than current configuration, so
+     * restating a corrected day cannot silently re-judge it.
+     *
+     * @return array<string, mixed>
+     */
+    public function recalculated(Attendance $attendance): array
+    {
+        if ($attendance->check_out === null) {
+            // Still open: nothing has been worked yet as far as the record is
+            // concerned, and the status stays whatever check-in decided.
+            return ['worked_minutes' => 0, 'overtime_minutes' => 0];
+        }
+
+        $closedAt = $this->instantFor($attendance, $attendance->check_out);
+
+        return $this->derivedFigures($attendance, $closedAt);
     }
 
     public function approve(Attendance $attendance, User $approver): Attendance
@@ -267,11 +333,41 @@ class AttendanceService
      * break is fully absorbed keeps it monotonic: more time present is never
      * less time worked.
      */
+    /**
+     * Worked minutes, overtime and status, from one set of times.
+     *
+     * Shared by check-out and by recalculation so a corrected day is judged
+     * exactly as a normal one is.
+     *
+     * @return array<string, mixed>
+     */
+    private function derivedFigures(Attendance $attendance, Carbon $closedAt): array
+    {
+        $worked = $this->workedMinutes($attendance, $closedAt);
+
+        return [
+            'worked_minutes' => $worked,
+            'overtime_minutes' => max(0, $worked - (int) $attendance->overtime_after_minutes),
+            // A short day is a half day, unless they were already late, which
+            // is the more specific fact about the day.
+            'status' => $this->statusFor($attendance, $worked),
+        ];
+    }
+
+    /** A wall-clock time on this record's work date, in the zone it was taken in. */
+    private function instantFor(Attendance $attendance, string $wallClock): Carbon
+    {
+        return Carbon::parse(
+            $attendance->work_date->toDateString().' '.$wallClock,
+            $attendance->timezone ?? config('app.timezone'),
+        );
+    }
+
     private function workedMinutes(Attendance $attendance, Carbon $checkOutAt): int
     {
-        $checkIn = Carbon::parse($attendance->work_date->toDateString().' '.$attendance->check_in);
+        $checkIn = $this->instantFor($attendance, (string) $attendance->check_in);
         $elapsed = max(0, (int) $checkIn->diffInMinutes($checkOutAt));
-        $breakDue = (int) config('attendance.break_after_minutes');
+        $breakDue = (int) $attendance->break_after_minutes;
 
         if ($elapsed <= $breakDue) {
             return $elapsed;

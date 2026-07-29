@@ -27,6 +27,11 @@ class AttendanceResource extends JsonResource
             'status' => $this->status->value,
             'work_mode' => $this->work_mode->value,
 
+            // A day still running reports what has elapsed, so it does not
+            // read as somebody who turned up and worked nothing.
+            'is_open' => $this->isOpen(),
+            'elapsed_minutes' => $this->elapsedMinutes(),
+
             'worked_minutes' => $this->worked_minutes,
             'worked_hours' => $this->workedHours(),
             'break_minutes' => $this->break_minutes,

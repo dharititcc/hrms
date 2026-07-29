@@ -189,7 +189,11 @@ function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; sh
         <span title={record.timezone ?? undefined}>{compactTimezone(record.timezone, record.check_in_at)}</span>
       </td>
       <td className="px-5 py-4 tabular-nums">
-        {record.check_out ? record.worked_hours : "—"}
+        {/* An open day says how long it has been running; a dash would read
+            the same as a day nobody turned up for. */}
+        {record.is_open
+          ? <span className="text-muted-foreground">{formatMinutes(record.elapsed_minutes)} so far</span>
+          : record.check_out ? record.worked_hours : "—"}
         {record.overtime_minutes > 0 && (
           <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">+{formatMinutes(record.overtime_minutes)}</span>
         )}

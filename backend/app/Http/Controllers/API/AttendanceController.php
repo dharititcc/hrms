@@ -114,6 +114,30 @@ class AttendanceController extends Controller
         ]);
     }
 
+    /**
+     * Corrects the times on a day, restating everything derived from them.
+     *
+     * This is how a forgotten check-out gets closed. Behind attendance.edit
+     * rather than attendance.create: correcting somebody's hours is an
+     * administrative act, not self-service.
+     */
+    public function correct(Request $request, Attendance $attendance): JsonResponse
+    {
+        abort_unless($attendance->owner_id === $request->user()->workspaceOwnerId(), 403);
+
+        $validated = $request->validate([
+            'check_in' => ['nullable', 'date_format:H:i,H:i:s'],
+            'check_out' => ['nullable', 'date_format:H:i,H:i:s'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $corrected = $this->service->correct($attendance, $request->user(), $validated);
+
+        return response()->json([
+            'data' => new AttendanceResource($corrected->load(['employee', 'checkInLocation'])),
+        ]);
+    }
+
     /** Clears the flag on attendance recorded away from a known office. */
     public function approve(Request $request, Attendance $attendance): JsonResponse
     {

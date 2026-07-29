@@ -77,6 +77,8 @@ Route::prefix('auth')->group(function () {
         Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware('can:attendance.create');
         Route::post('/attendance/{attendance}/check-out', [AttendanceController::class, 'checkOut'])->middleware('can:attendance.create');
         Route::patch('/attendance/{attendance}/approve', [AttendanceController::class, 'approve'])->middleware('can:attendance.edit');
+        // Correcting somebody's hours, including closing a forgotten check-out.
+        Route::patch('/attendance/{attendance}', [AttendanceController::class, 'correct'])->middleware('can:attendance.edit');
 
         Route::get('/attendance-locations', [AttendanceLocationController::class, 'index'])->middleware('can:attendance.view');
         Route::post('/attendance-locations', [AttendanceLocationController::class, 'store'])->middleware('can:attendance.edit');

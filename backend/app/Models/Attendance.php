@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'check_in_at', 'check_out_at', 'timezone',
     'status', 'work_mode', 'notes',
     'worked_minutes', 'break_minutes', 'late_minutes', 'overtime_minutes',
+    'break_after_minutes', 'overtime_after_minutes',
     'check_in_latitude', 'check_in_longitude', 'check_in_address', 'check_in_location_id',
     'check_out_latitude', 'check_out_longitude', 'check_out_address',
     'device_type', 'device_os', 'device_browser', 'ip_address',
@@ -78,6 +79,25 @@ class Attendance extends Model
     }
 
     /** "7h 30m", for display. */
+    /** Checked in and not yet out, so nothing has been derived for it. */
+    public function isOpen(): bool
+    {
+        return $this->check_in !== null && $this->check_out === null;
+    }
+
+    /**
+     * Minutes since check-in on a day still open, for showing progress
+     * instead of a zero that reads as "worked nothing".
+     */
+    public function elapsedMinutes(): int
+    {
+        if (! $this->isOpen() || $this->check_in_at === null) {
+            return 0;
+        }
+
+        return max(0, (int) $this->check_in_at->diffInMinutes(now()));
+    }
+
     public function workedHours(): string
     {
         $hours = intdiv($this->worked_minutes, 60);

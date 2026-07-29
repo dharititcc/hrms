@@ -18,6 +18,13 @@ Artisan::command('inspire', function () {
 */
 Schedule::command('tasks:generate-recurrences')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('tasks:send-due-reminders')->dailyAt('07:00')->withoutOverlapping();
+
+/*
+| Runs before the recurrence job so a forgotten check-out is closed and sent
+| for approval rather than sitting at zero worked forever. Only touches days
+| already past, so it can never close a shift somebody is still working.
+*/
+Schedule::command('attendance:close-abandoned')->dailyAt('00:30')->withoutOverlapping();
 Schedule::command('meetings:generate-recurrences')->dailyAt('01:15')->withoutOverlapping();
 
 /*
