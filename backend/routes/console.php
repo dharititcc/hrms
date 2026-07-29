@@ -18,3 +18,11 @@ Artisan::command('inspire', function () {
 */
 Schedule::command('tasks:generate-recurrences')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('tasks:send-due-reminders')->dailyAt('07:00')->withoutOverlapping();
+Schedule::command('meetings:generate-recurrences')->dailyAt('01:15')->withoutOverlapping();
+
+/*
+| Meeting reminders run every five minutes rather than daily: a reminder set
+| for 15 minutes before the start is useless once a day has passed.
+| reminder_sent_at keeps repeat runs from sending twice.
+*/
+Schedule::command('meetings:send-reminders')->everyFiveMinutes()->withoutOverlapping();
