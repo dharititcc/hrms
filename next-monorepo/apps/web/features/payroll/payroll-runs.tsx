@@ -1,16 +1,17 @@
 "use client"
 
-import { AlertTriangle, ArrowLeft, CalendarRange, Play, RefreshCw, Trash2 } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Ban, CalendarRange, Check, Play, RefreshCw, Send, Trash2, Wallet } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { GenerateRunDialog } from "@/features/payroll/generate-run-dialog"
+import { PaymentDialog } from "@/features/payroll/payment-dialog"
 import { useSalaryComponents } from "@/hooks/use-payroll-config"
 import { usePayrollRun, usePayrollRunMutations, usePayrollRuns } from "@/hooks/use-payroll-runs"
 import { usePermissions } from "@/hooks/use-permissions"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import {
-  payrollRunStatusLabels, payrollRunStatusStyles,
+  payrollRunStatusLabels, payrollRunStatusStyles, salarySlipStatusLabels,
   type PayrollRun, type SalarySlip,
 } from "@/types/payroll"
 
@@ -133,11 +134,12 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const { can } = usePermissions()
   const { data: run, isLoading } = usePayrollRun(id)
   const { data: componentData } = useSalaryComponents({})
-  const { regenerate } = usePayrollRunMutations()
+  const { regenerate, submit, approve, cancel } = usePayrollRunMutations()
   const { toast } = useToast()
 
   // staff id => component code => amount, as the generator expects it.
   const [manual, setManual] = useState<Record<number, Record<string, string>>>({})
+  const [paying, setPaying] = useState<SalarySlip | null>(null)
 
   // Which lines are entered per payslip rather than derived. Progressive taxes
   // land here and generate as zero, so they need surfacing or a run silently
@@ -152,9 +154,25 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
 
   const slips = run.slips ?? []
   const canRecalculate = can("payroll.generate") && run.is_editable
+  const canPay = can("payroll.pay") && (run.status === "approved" || run.status === "paid")
 
   const unfilled = slips.reduce((total, slip) => total + (slip.lines ?? [])
     .filter((line) => manualCodes.has(line.code) && Number(line.amount) === 0).length, 0)
+
+  const transition = async (
+    action: "submit" | "approve" | "cancel",
+    mutation: { mutateAsync: (id: number) => Promise<unknown> },
+    title: string,
+    confirmation?: string,
+  ) => {
+    if (confirmation && !window.confirm(confirmation)) return
+    try {
+      await mutation.mutateAsync(run.id)
+      toast({ tone: "success", title })
+    } catch (error) {
+      toast({ tone: "error", title: `Unable to ${action} this payroll`, description: getApiErrorMessage(error) })
+    }
+  }
 
   const recalculate = async () => {
     const amounts: Record<number, Record<string, number>> = {}
@@ -201,11 +219,43 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
             </span>
           </p>
         </div>
-        {canRecalculate && (
-          <Button variant="outline" isDisabled={regenerate.isPending} onPress={() => void recalculate()}>
-            <RefreshCw />{regenerate.isPending ? "Recalculating…" : "Recalculate"}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {canRecalculate && (
+            <Button variant="outline" isDisabled={regenerate.isPending} onPress={() => void recalculate()}>
+              <RefreshCw />{regenerate.isPending ? "Recalculating…" : "Recalculate"}
+            </Button>
+          )}
+
+          {can("payroll.edit") && run.status === "draft" && run.slip_count > 0 && (
+            <Button variant="outline" isDisabled={submit.isPending} onPress={() => void transition("submit", submit, "Sent for approval")}>
+              <Send />Send for approval
+            </Button>
+          )}
+
+          {can("payroll.approve") && run.is_editable && run.slip_count > 0 && (
+            <Button
+              isDisabled={approve.isPending}
+              onPress={() => void transition(
+                "approve", approve, "Payroll approved",
+                unfilled > 0
+                  ? `${unfilled} line(s) entered per payslip are still zero. Approving commits these figures and they cannot be recalculated afterwards. Continue?`
+                  : "Approving commits these figures. The run cannot be recalculated or deleted afterwards. Continue?",
+              )}
+            >
+              <Check />Approve
+            </Button>
+          )}
+
+          {can("payroll.approve") && run.status !== "cancelled" && run.status !== "paid" && (
+            <Button
+              variant="outline"
+              isDisabled={cancel.isPending}
+              onPress={() => void transition("cancel", cancel, "Payroll cancelled", `Cancel ${run.title}?`)}
+            >
+              <Ban />Cancel run
+            </Button>
+          )}
+        </div>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-4">
@@ -222,7 +272,13 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
         </p>
       )}
 
-      {unfilled > 0 && (
+      {run.status === "cancelled" && (
+        <p className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+          This run was cancelled. Its payslips are kept for the record but nothing will be paid against them.
+        </p>
+      )}
+
+      {unfilled > 0 && run.is_editable && (
         <p className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <span className="text-muted-foreground">
@@ -253,43 +309,59 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 ...current,
                 [slip.staff_id]: { ...current[slip.staff_id], [code]: value },
               }))}
+              onPay={canPay ? () => setPaying(slip) : undefined}
             />
           ))}
         </div>
       )}
+
+      {paying && <PaymentDialog slip={paying} runId={run.id} canPay={canPay} onClose={() => setPaying(null)} />}
     </div>
   )
 }
 
-function SlipCard({ slip, manualCodes, editable, values, onChange }: {
+function SlipCard({ slip, manualCodes, editable, values, onChange, onPay }: {
   slip: SalarySlip
   manualCodes: Set<string>
   editable: boolean
   values: Record<string, string>
   onChange: (code: string, value: string) => void
+  onPay?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const lines = slip.lines ?? []
   const symbol = slip.currency_symbol
+  const settled = slip.status === "paid"
 
   return (
     <div className="overflow-hidden rounded-2xl border bg-background">
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        aria-expanded={open}
-        className="flex w-full flex-wrap items-center justify-between gap-3 p-4 text-left transition-colors hover:bg-muted/20"
-      >
-        <div className="min-w-40">
-          <p className="font-medium">{slip.staff_name ?? `Staff #${slip.staff_id}`}</p>
-          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{slip.slip_number}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-5 text-sm tabular-nums">
-          <span className="text-muted-foreground">Gross {symbol}{Number(slip.gross_salary).toLocaleString()}</span>
-          <span className="text-muted-foreground">Deductions {symbol}{Number(slip.total_deductions).toLocaleString()}</span>
-          <span className="font-semibold">Net {symbol}{Number(slip.net_salary).toLocaleString()}</span>
-        </div>
-      </button>
+      <div className="flex flex-wrap items-center gap-3 p-4">
+        <button
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 text-left"
+        >
+          <div className="min-w-40">
+            <p className="font-medium">{slip.staff_name ?? `Staff #${slip.staff_id}`}</p>
+            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{slip.slip_number}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-5 text-sm tabular-nums">
+            <span className="text-muted-foreground">Gross {symbol}{Number(slip.gross_salary).toLocaleString()}</span>
+            <span className="text-muted-foreground">Deductions {symbol}{Number(slip.total_deductions).toLocaleString()}</span>
+            <span className="font-semibold">Net {symbol}{Number(slip.net_salary).toLocaleString()}</span>
+          </div>
+        </button>
+
+        {onPay && (
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${settled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
+              {salarySlipStatusLabels[slip.status]}
+            </span>
+            <Button variant="outline" size="sm" onPress={onPay}><Wallet />{settled ? "Payments" : "Pay"}</Button>
+          </div>
+        )}
+      </div>
 
       {open && (
         <div className="border-t">

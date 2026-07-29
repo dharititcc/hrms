@@ -79,6 +79,40 @@ export type SalaryComponentInput = {
 }
 
 export type PayrollRunStatus = "draft" | "pending_approval" | "approved" | "paid" | "cancelled"
+export type SalarySlipStatus = "draft" | "approved" | "partially_paid" | "paid" | "cancelled"
+export type PaymentMethod = "bank_transfer" | "cash" | "cheque" | "card" | "other"
+
+export type SalaryPayment = {
+  id: number
+  salary_slip_id: number
+  amount: string
+  currency_code: string
+  paid_at: string
+  method: PaymentMethod
+  reference: string | null
+  note: string | null
+  recorded_by: number | null
+  recorded_by_name?: string | null
+  created_at: string
+}
+
+export type SalaryPaymentListResponse = {
+  data: SalaryPayment[]
+  meta: {
+    net_salary: string
+    paid_amount: string
+    outstanding: number
+    methods: PaymentMethod[]
+  }
+}
+
+export type RecordPaymentInput = {
+  amount: number
+  paid_at?: string | null
+  method?: PaymentMethod
+  reference?: string | null
+  note?: string | null
+}
 
 export type SalarySlipLine = {
   type: SalaryComponentType
@@ -109,8 +143,9 @@ export type SalarySlip = {
   net_salary: string
   paid_amount: string
   outstanding: number
-  status: string
+  status: SalarySlipStatus
   lines?: SalarySlipLine[]
+  payments?: SalaryPayment[]
   created_at?: string
 }
 
@@ -201,6 +236,22 @@ export const payrollRunStatusStyles: Record<PayrollRunStatus, string> = {
   approved: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
   paid: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   cancelled: "bg-destructive/10 text-destructive",
+}
+
+export const salarySlipStatusLabels: Record<SalarySlipStatus, string> = {
+  draft: "Draft",
+  approved: "Unpaid",
+  partially_paid: "Part paid",
+  paid: "Paid",
+  cancelled: "Cancelled",
+}
+
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  bank_transfer: "Bank transfer",
+  cash: "Cash",
+  cheque: "Cheque",
+  card: "Card",
+  other: "Other",
 }
 
 export const salaryAssignmentStatusLabels: Record<SalaryAssignmentStatus, string> = {

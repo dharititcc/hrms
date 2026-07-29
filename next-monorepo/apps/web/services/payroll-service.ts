@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
-  GeneratePayrollInput, PayrollRun, PayrollRunListResponse,
-  SalaryAssignment, SalaryAssignmentInput,
+  GeneratePayrollInput, PayrollRun, PayrollRunListResponse, RecordPaymentInput,
+  SalaryAssignment, SalaryAssignmentInput, SalaryPayment, SalaryPaymentListResponse,
   SalaryComponent, SalaryComponentInput, SalaryComponentListResponse,
   SalaryStructure, SalaryStructureInput, SalaryStructureListResponse,
 } from "@/types/payroll"
@@ -81,6 +81,32 @@ export const payrollService = {
   },
   async removeRun(id: number) {
     await apiClient.delete(`/auth/payroll-runs/${id}`)
+  },
+
+  // draft -> pending approval -> approved -> paid.
+  async submitRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/submit`)
+    return data.data
+  },
+  async approveRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/approve`)
+    return data.data
+  },
+  async cancelRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/cancel`)
+    return data.data
+  },
+
+  async payments(slipId: number) {
+    const { data } = await apiClient.get<SalaryPaymentListResponse>(`/auth/salary-slips/${slipId}/payments`)
+    return data
+  },
+  async recordPayment(slipId: number, input: RecordPaymentInput) {
+    const { data } = await apiClient.post<{ data: SalaryPayment }>(`/auth/salary-slips/${slipId}/payments`, input)
+    return data.data
+  },
+  async reversePayment(id: number) {
+    await apiClient.delete(`/auth/salary-payments/${id}`)
   },
 }
 

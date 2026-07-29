@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PayrollCountry;
 use App\Enums\SalaryComponentType;
+use App\Enums\SalarySlipStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ class SalarySlip extends Model
     {
         return [
             'country' => PayrollCountry::class,
+            'status' => SalarySlipStatus::class,
             'basic_salary' => 'decimal:2',
             'total_earnings' => 'decimal:2',
             'total_deductions' => 'decimal:2',

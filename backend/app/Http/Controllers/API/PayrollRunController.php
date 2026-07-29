@@ -7,12 +7,16 @@ use App\Http\Requests\Payroll\GeneratePayrollRequest;
 use App\Http\Resources\PayrollRunResource;
 use App\Models\PayrollRun;
 use App\Services\Payroll\PayrollGenerationService;
+use App\Services\Payroll\PayrollWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PayrollRunController extends Controller
 {
-    public function __construct(private readonly PayrollGenerationService $service) {}
+    public function __construct(
+        private readonly PayrollGenerationService $service,
+        private readonly PayrollWorkflowService $workflow,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -28,7 +32,7 @@ class PayrollRunController extends Controller
     {
         $this->authorizeRun($request, $run);
 
-        return new PayrollRunResource($run->load(['slips.staff', 'slips.lines']));
+        return new PayrollRunResource($run->load(['slips.staff', 'slips.lines', 'slips.payments']));
     }
 
     public function store(GeneratePayrollRequest $request): JsonResponse
@@ -43,7 +47,40 @@ class PayrollRunController extends Controller
     {
         $this->authorizeRun($request, $run);
 
+        /*
+        | isEditable rather than !isLocked: a cancelled run is neither, and
+        | recalculating one would quietly revive it as working figures while it
+        | still reads as cancelled.
+        */
+        abort_unless($run->status->isEditable(), 422, 'Only a draft payroll can be recalculated.');
+
         return new PayrollRunResource($this->service->regenerate($run, $request->manualAmounts()));
+    }
+
+    /** Hands the draft to whoever approves it. */
+    public function submit(Request $request, PayrollRun $run): PayrollRunResource
+    {
+        $this->authorizeRun($request, $run);
+
+        return new PayrollRunResource($this->workflow->submit($run));
+    }
+
+    /**
+     * Commits the figures. Past this point the run cannot be recalculated or
+     * deleted, and payments may be recorded against its payslips.
+     */
+    public function approve(Request $request, PayrollRun $run): PayrollRunResource
+    {
+        $this->authorizeRun($request, $run);
+
+        return new PayrollRunResource($this->workflow->approve($run, $request->user()));
+    }
+
+    public function cancel(Request $request, PayrollRun $run): PayrollRunResource
+    {
+        $this->authorizeRun($request, $run);
+
+        return new PayrollRunResource($this->workflow->cancel($run));
     }
 
     public function destroy(Request $request, PayrollRun $run): JsonResponse

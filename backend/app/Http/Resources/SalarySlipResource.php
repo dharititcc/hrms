@@ -34,7 +34,8 @@ class SalarySlipResource extends JsonResource
             'paid_amount' => $this->paid_amount,
             'outstanding' => $this->outstanding(),
 
-            'status' => $this->status,
+            'status' => $this->status->value,
+            'payments' => SalaryPaymentResource::collection($this->whenLoaded('payments')),
             'lines' => $this->whenLoaded('lines', fn () => $this->lines->map(fn ($line) => [
                 'type' => $line->type->value,
                 'code' => $line->code,

@@ -21,6 +21,7 @@ use App\Http\Controllers\API\PayrollRunController;
 use App\Http\Controllers\API\PermissionController;
 use App\Http\Controllers\API\SalaryAssignmentController;
 use App\Http\Controllers\API\SalaryComponentController;
+use App\Http\Controllers\API\SalaryPaymentController;
 use App\Http\Controllers\API\SalaryStructureController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
@@ -116,6 +117,19 @@ Route::prefix('auth')->group(function () {
         Route::post('/payroll-runs', [PayrollRunController::class, 'store'])->middleware('can:payroll.generate');
         Route::post('/payroll-runs/{run}/regenerate', [PayrollRunController::class, 'regenerate'])->middleware('can:payroll.generate');
         Route::delete('/payroll-runs/{run}', [PayrollRunController::class, 'destroy'])->middleware('can:payroll.delete');
+
+        /*
+        | draft -> pending approval -> approved -> paid. Approving is separate
+        | from generating so a second pair of eyes can be required, and paying
+        | is separate again because it is money leaving the business.
+        */
+        Route::patch('/payroll-runs/{run}/submit', [PayrollRunController::class, 'submit'])->middleware('can:payroll.edit');
+        Route::patch('/payroll-runs/{run}/approve', [PayrollRunController::class, 'approve'])->middleware('can:payroll.approve');
+        Route::patch('/payroll-runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->middleware('can:payroll.approve');
+
+        Route::get('/salary-slips/{slip}/payments', [SalaryPaymentController::class, 'index'])->middleware('can:payroll.view-all');
+        Route::post('/salary-slips/{slip}/payments', [SalaryPaymentController::class, 'store'])->middleware('can:payroll.pay');
+        Route::delete('/salary-payments/{payment}', [SalaryPaymentController::class, 'destroy'])->middleware('can:payroll.pay');
         Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('can:expenses.view');
         Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('can:expenses.create');
         Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus'])->middleware('can:expenses.approve');
