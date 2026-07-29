@@ -322,6 +322,36 @@ class AttendanceCaptureTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('timezone');
     }
 
+    public function test_a_legacy_timezone_alias_is_accepted(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-01 23:30:00', 'UTC'));
+        Sanctum::actingAs($this->owner);
+
+        /*
+        | Chrome on Windows reports Asia/Calcutta rather than Asia/Kolkata.
+        | It is missing from timezone_identifiers_list(), so Laravel's own
+        | timezone rule rejects it and check-in failed on an ordinary machine.
+        */
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'Asia/Calcutta',
+        ])->assertOk()
+            ->assertJsonPath('data.check_in', '05:00:00')
+            ->assertJsonPath('data.work_date', '2026-03-02')
+            ->assertJsonPath('data.timezone', 'Asia/Calcutta');
+    }
+
+    public function test_a_zone_that_passes_validation_is_never_swapped_for_the_default(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-01 23:30:00', 'UTC'));
+        Sanctum::actingAs($this->owner);
+
+        // The service used to re-check against a narrower list than the
+        // request did, and silently fall back when the two disagreed.
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'US/Eastern',
+        ])->assertOk()->assertJsonPath('data.check_in', '18:30:00');
+    }
+
     public function test_check_out_closes_the_day_in_the_zone_it_was_opened_in(): void
     {
         $this->travelTo(Carbon::parse('2026-03-02 03:30:00', 'UTC'));

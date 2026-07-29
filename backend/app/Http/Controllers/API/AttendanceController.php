@@ -7,6 +7,7 @@ use App\Enums\WorkMode;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceResource;
 use App\Models\Attendance;
+use App\Rules\ValidTimezone;
 use App\Services\AttendanceService;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
@@ -50,7 +51,7 @@ class AttendanceController extends Controller
 
         abort_if($employee === null, 404, 'This account is not linked to an employee record.');
 
-        $validated = $request->validate(['timezone' => ['nullable', 'timezone']]);
+        $validated = $request->validate(['timezone' => ['nullable', new ValidTimezone]]);
 
         // "Today" is the caller's today. Reading it from the server's clock
         // would hide this morning's check-in from somebody a day ahead.
@@ -74,7 +75,7 @@ class AttendanceController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             // What the browser reports, so the day is recorded where the
             // employee actually is rather than where the server is.
-            'timezone' => ['nullable', 'timezone'],
+            'timezone' => ['nullable', new ValidTimezone],
         ]);
 
         $employee = $request->user()->workspaceEmployees()->findOrFail($validated['employee_id']);
@@ -105,7 +106,7 @@ class AttendanceController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             // What the browser reports, so the day is recorded where the
             // employee actually is rather than where the server is.
-            'timezone' => ['nullable', 'timezone'],
+            'timezone' => ['nullable', new ValidTimezone],
         ]);
 
         return response()->json([

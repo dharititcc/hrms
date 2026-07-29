@@ -9,6 +9,7 @@ use App\Models\AttendanceLocation;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
+use App\Rules\ValidTimezone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -154,9 +155,9 @@ class AttendanceService
     {
         $zone = $attributes['timezone'] ?? null;
 
-        return is_string($zone) && in_array($zone, timezone_identifiers_list(), strict: true)
-            ? $zone
-            : config('app.timezone');
+        // The same test the request made, so a zone that passed validation is
+        // never quietly swapped for the workspace default here.
+        return ValidTimezone::usable($zone) ? $zone : config('app.timezone');
     }
 
     /** @return array{id: int|null, starts_at: string, ends_at: string, grace_minutes: int, break_minutes: int} */
