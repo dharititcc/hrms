@@ -18,4 +18,10 @@ enum Action: string
     case Comment = 'comment';
     case Upload = 'upload';
     case Export = 'export';
+    /** Run a process that produces records, such as a monthly payroll. */
+    case Generate = 'generate';
+    /** Record money actually leaving the business. */
+    case Pay = 'pay';
+    /** Retrieve a generated document, such as a payslip PDF. */
+    case Download = 'download';
 }

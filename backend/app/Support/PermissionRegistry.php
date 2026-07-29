@@ -38,7 +38,9 @@ final class PermissionRegistry
                 Module::Staff->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete, Action::Assign, Action::Export],
                 Module::Attendance->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export],
                 Module::Leave->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Approve, Action::Export],
-                Module::Payroll->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export],
+                // Managers run and pay payroll; approval is separate so a
+                // second pair of eyes can be required if desired.
+                Module::Payroll->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export, Action::Generate, Action::Approve, Action::Pay, Action::Download],
                 Module::Expenses->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Approve, Action::Export],
                 Module::Tasks->value => self::ALL,
                 Module::Meetings->value => self::ALL,
@@ -59,7 +61,8 @@ final class PermissionRegistry
                 // and expense claims, never a colleague's.
                 Module::Attendance->value => [Action::View, Action::Create],
                 Module::Leave->value => [Action::View, Action::Create],
-                Module::Payroll->value => [Action::View],
+                // Their own payslip, and the right to download it.
+                Module::Payroll->value => [Action::View, Action::Download],
                 Module::Expenses->value => [Action::View, Action::Create],
                 // Collaborative work is visible across the workspace.
                 Module::Tasks->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Comment, Action::Upload],
