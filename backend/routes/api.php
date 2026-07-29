@@ -69,8 +69,10 @@ Route::prefix('auth')->group(function () {
         | request is a separate permission from editing it.
         */
         Route::get('/attendance', [AttendanceController::class, 'index'])->middleware('can:attendance.view');
-        Route::post('/attendance/clock-in', [AttendanceController::class, 'clockIn'])->middleware('can:attendance.create');
-        Route::post('/attendance/{attendance}/clock-out', [AttendanceController::class, 'clockOut'])->middleware('can:attendance.create');
+        Route::get('/attendance/today', [AttendanceController::class, 'today'])->middleware('can:attendance.view');
+        Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware('can:attendance.create');
+        Route::post('/attendance/{attendance}/check-out', [AttendanceController::class, 'checkOut'])->middleware('can:attendance.create');
+        Route::patch('/attendance/{attendance}/approve', [AttendanceController::class, 'approve'])->middleware('can:attendance.edit');
         Route::get('/leave/types', [LeaveController::class, 'types'])->middleware('can:leave.view');
         Route::get('/leave/requests', [LeaveController::class, 'index'])->middleware('can:leave.view');
         Route::post('/leave/requests', [LeaveController::class, 'store'])->middleware('can:leave.create');

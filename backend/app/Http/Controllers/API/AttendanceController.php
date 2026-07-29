@@ -3,79 +3,110 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\Module;
+use App\Enums\WorkMode;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AttendanceResource;
 use App\Models\Attendance;
+use App\Services\AttendanceService;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AttendanceController extends Controller
 {
+    public function __construct(private readonly AttendanceService $service) {}
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
+            'staff_id' => ['nullable', 'integer'],
         ]);
 
         $query = Attendance::query()
-            ->with('staff')
+            ->with(['staff', 'checkInLocation'])
             ->where('owner_id', $request->user()->workspaceOwnerId());
 
         // Without attendance.view-all, only the caller's own days.
         RecordScope::apply($query, $request->user(), Module::Attendance);
 
         if (isset($validated['month'])) {
-            // whereYear/whereMonth rather than strftime, which is SQLite-only
-            // and silently failed on MySQL.
+            // whereYear/whereMonth rather than strftime, which is SQLite-only.
             [$year, $month] = explode('-', $validated['month']);
             $query->whereYear('work_date', (int) $year)->whereMonth('work_date', (int) $month);
         }
 
-        return AttendanceResource::collection($query->latest('work_date')->paginate(20))->response();
+        $query->when($validated['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id));
+
+        return AttendanceResource::collection($query->latest('work_date')->paginate(31))->response();
     }
 
-    public function clockIn(Request $request): JsonResponse
+    /** Today's record for the caller, for the dashboard's check-in card. */
+    public function today(Request $request): JsonResponse
+    {
+        $staff = $request->user()->staffProfile;
+
+        abort_if($staff === null, 404, 'This account is not linked to an employee record.');
+
+        $attendance = $this->service->forDate($staff, now()->toDateString());
+
+        return response()->json([
+            'data' => $attendance === null ? null : new AttendanceResource($attendance->load('checkInLocation')),
+        ]);
+    }
+
+    public function checkIn(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'staff_id' => ['required', 'integer', 'exists:staff,id'],
+            'work_mode' => ['nullable', Rule::enum(WorkMode::class)],
+            'work_shift_id' => ['nullable', 'integer'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'address' => ['nullable', 'string', 'max:255'],
         ]);
 
         $staff = $request->user()->workspaceStaff()->findOrFail($validated['staff_id']);
 
-        // Clocking somebody else in is a supervisory act.
         abort_unless(
             RecordScope::allows($request->user(), Module::Attendance, $staff->id),
             403,
-            'You can only clock in for yourself.',
+            'You can only check in for yourself.',
         );
 
-        $attendance = Attendance::firstOrCreate(
-            [
-                'owner_id' => $request->user()->workspaceOwnerId(),
-                'staff_id' => $staff->id,
-                'work_date' => now()->toDateString(),
-            ],
-            ['status' => 'present'],
-        );
+        $attendance = $this->service->checkIn($staff, $request->user(), $validated, $request);
 
-        // Keeps the first clock-in of the day rather than overwriting it.
-        $attendance->update(['check_in' => $attendance->check_in ?? now()->format('H:i:s')]);
-
-        return response()->json(new AttendanceResource($attendance->load('staff')));
+        return response()->json(['data' => new AttendanceResource($attendance->load(['staff', 'checkInLocation']))]);
     }
 
-    public function clockOut(Request $request, Attendance $attendance): JsonResponse
+    public function checkOut(Request $request, Attendance $attendance): JsonResponse
     {
         abort_unless($attendance->owner_id === $request->user()->workspaceOwnerId(), 403);
         abort_unless(
             RecordScope::allows($request->user(), Module::Attendance, $attendance->staff_id),
             403,
-            'You can only clock out for yourself.',
+            'You can only check out for yourself.',
         );
 
-        $attendance->update(['check_out' => now()->format('H:i:s')]);
+        $validated = $request->validate([
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'address' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        return response()->json(new AttendanceResource($attendance->load('staff')));
+        return response()->json([
+            'data' => new AttendanceResource($this->service->checkOut($attendance, $validated)->load(['staff', 'checkInLocation'])),
+        ]);
+    }
+
+    /** Clears the flag on attendance recorded away from a known office. */
+    public function approve(Request $request, Attendance $attendance): JsonResponse
+    {
+        abort_unless($attendance->owner_id === $request->user()->workspaceOwnerId(), 403);
+
+        return response()->json([
+            'data' => new AttendanceResource($this->service->approve($attendance, $request->user())->load(['staff', 'checkInLocation'])),
+        ]);
     }
 }

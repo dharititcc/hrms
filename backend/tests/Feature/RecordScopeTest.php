@@ -82,7 +82,7 @@ class RecordScopeTest extends TestCase
             'start_date' => now()->toDateString(), 'end_date' => now()->addDay()->toDateString(),
         ])->assertForbidden();
 
-        $this->postJson('/api/auth/attendance/clock-in', ['staff_id' => $colleague->id])->assertForbidden();
+        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $colleague->id])->assertForbidden();
     }
 
     public function test_employees_can_still_act_for_themselves(): void
@@ -92,7 +92,7 @@ class RecordScopeTest extends TestCase
 
         Sanctum::actingAs($employee);
 
-        $this->postJson('/api/auth/attendance/clock-in', ['staff_id' => $staff->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $staff->id])->assertOk();
         $this->postJson('/api/auth/expenses', [
             'staff_id' => $staff->id, 'title' => 'Taxi', 'category' => 'Travel',
             'amount' => 20, 'expense_date' => now()->toDateString(),
@@ -107,7 +107,7 @@ class RecordScopeTest extends TestCase
 
         Sanctum::actingAs($manager);
 
-        $this->postJson('/api/auth/attendance/clock-in', ['staff_id' => $colleague->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $colleague->id])->assertOk();
     }
 
     public function test_clients_see_only_tasks_they_belong_to(): void

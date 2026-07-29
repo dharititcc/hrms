@@ -1,8 +1,83 @@
 <?php
+
 namespace App\Models;
+
 use App\Enums\AttendanceStatus;
+use App\Enums\WorkMode;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-#[Fillable(['owner_id','staff_id','work_date','check_in','check_out','status','notes'])]
-class Attendance extends Model { protected function casts(): array { return ['work_date'=>'date','status'=>AttendanceStatus::class]; } public function owner(): BelongsTo { return $this->belongsTo(User::class,'owner_id'); } public function staff(): BelongsTo { return $this->belongsTo(Staff::class); } }
+
+#[Fillable([
+    'owner_id', 'staff_id', 'work_shift_id', 'work_date', 'check_in', 'check_out',
+    'status', 'work_mode', 'notes',
+    'worked_minutes', 'break_minutes', 'late_minutes', 'overtime_minutes',
+    'check_in_latitude', 'check_in_longitude', 'check_in_address', 'check_in_location_id',
+    'check_out_latitude', 'check_out_longitude', 'check_out_address',
+    'device_type', 'device_os', 'device_browser', 'ip_address',
+    'requires_approval', 'is_manual', 'approved_by', 'approved_at',
+])]
+#[Hidden(['owner_id'])]
+class Attendance extends Model
+{
+    protected function casts(): array
+    {
+        return [
+            'work_date' => 'date',
+            'status' => AttendanceStatus::class,
+            'work_mode' => WorkMode::class,
+            'worked_minutes' => 'integer',
+            'break_minutes' => 'integer',
+            'late_minutes' => 'integer',
+            'overtime_minutes' => 'integer',
+            'check_in_latitude' => 'float',
+            'check_in_longitude' => 'float',
+            'check_out_latitude' => 'float',
+            'check_out_longitude' => 'float',
+            'requires_approval' => 'boolean',
+            'is_manual' => 'boolean',
+            'approved_at' => 'datetime',
+        ];
+    }
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function staff(): BelongsTo
+    {
+        return $this->belongsTo(Staff::class);
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(WorkShift::class, 'work_shift_id');
+    }
+
+    public function checkInLocation(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceLocation::class, 'check_in_location_id');
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function scopeAwaitingApproval(Builder $query): Builder
+    {
+        return $query->where('requires_approval', true);
+    }
+
+    /** "7h 30m", for display. */
+    public function workedHours(): string
+    {
+        $hours = intdiv($this->worked_minutes, 60);
+        $minutes = $this->worked_minutes % 60;
+
+        return $hours === 0 ? "{$minutes}m" : ($minutes === 0 ? "{$hours}h" : "{$hours}h {$minutes}m");
+    }
+}
