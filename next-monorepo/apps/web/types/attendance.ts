@@ -6,8 +6,14 @@ export type AttendanceRecord = {
   employee_id: number
   employee_name?: string | null
   work_date: string
+  /** Wall clock where the employee was, e.g. "09:12:00". */
   check_in: string | null
   check_out: string | null
+  /** The same moments as absolute instants, for showing in the viewer's zone. */
+  check_in_at: string | null
+  check_out_at: string | null
+  /** The IANA zone the employee's browser reported when recording. */
+  timezone: string | null
   status: AttendanceStatus
   work_mode: WorkMode
   worked_minutes: number
@@ -64,6 +70,7 @@ export type AttendanceLocationInput = {
   is_active?: boolean
 }
 
+/** The service adds the browser's timezone, so callers never pass it. */
 export type CheckInInput = {
   employee_id: number
   work_mode?: WorkMode

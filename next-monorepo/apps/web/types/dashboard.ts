@@ -31,6 +31,8 @@ export type DashboardStats = {
     my_attendance_id: number | null
     my_status: string | null
     my_check_in: string | null
+    my_check_in_at: string | null
+    my_timezone: string | null
     active_employees?: number
     present_today?: number
     late_today?: number

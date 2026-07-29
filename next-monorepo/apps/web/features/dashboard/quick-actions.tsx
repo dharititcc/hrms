@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button, buttonVariants } from "@workspace/ui/components/button"
 import { useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
-import { capturePosition } from "@/services/attendance-service"
+import { capturePosition, formatRecordedTime } from "@/services/attendance-service"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { DashboardStats } from "@/types/dashboard"
@@ -74,7 +74,7 @@ export function QuickActions({ attendance, canCheckIn }: {
       )}
 
       {showAttendance && attendance?.checked_in && !done && attendance.my_check_in && (
-        <span className="text-xs text-muted-foreground">Since {attendance.my_check_in}</span>
+        <span className="text-xs text-muted-foreground">Since {formatRecordedTime(attendance.my_check_in_at, attendance.my_check_in, attendance.my_timezone)}</span>
       )}
 
       <div className="ml-auto flex flex-wrap gap-2">

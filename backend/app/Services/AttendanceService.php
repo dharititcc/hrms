@@ -26,7 +26,16 @@ class AttendanceService
 {
     public function checkIn(Employee $employee, User $actor, array $attributes, ?Request $request = null): Attendance
     {
-        $today = now()->toDateString();
+        /*
+        | Everything about the day is read in the employee's own zone: which
+        | date it is, what the clock says, and therefore whether they are late
+        | against a shift that starts at 09:00 where they are. Reading any of
+        | that from the server's clock puts somebody in another country on the
+        | wrong day at the wrong time.
+        */
+        $zone = $this->zoneFrom($attributes);
+        $now = now()->setTimezone($zone);
+        $today = $now->toDateString();
         $existing = $this->forDate($employee, $today);
 
         if ($existing?->check_in !== null) {
@@ -43,9 +52,7 @@ class AttendanceService
         $offices = AttendanceLocation::query()->where('owner_id', $employee->owner_id)->active()->get();
         $location = $this->resolveLocation($offices, $mode, $attributes, $employee);
 
-        $now = now();
-
-        return DB::transaction(function () use ($employee, $attributes, $request, $mode, $shift, $location, $offices, $today, $now): Attendance {
+        return DB::transaction(function () use ($employee, $attributes, $request, $mode, $shift, $location, $offices, $today, $now, $zone): Attendance {
             $attendance = Attendance::firstOrNew([
                 'owner_id' => $employee->owner_id,
                 'staff_id' => $employee->id,
@@ -56,7 +63,10 @@ class AttendanceService
 
             $attendance->fill([
                 'work_shift_id' => $shift['id'],
+                // The wall clock where they are, plus the instant it maps to.
                 'check_in' => $now->format('H:i:s'),
+                'check_in_at' => $now,
+                'timezone' => $zone,
                 'work_mode' => $mode,
                 'status' => $lateMinutes > 0 ? AttendanceStatus::Late : AttendanceStatus::Present,
                 'late_minutes' => $lateMinutes,
@@ -90,12 +100,16 @@ class AttendanceService
             ]);
         }
 
-        $now = now();
+        // Closing the day in the zone it was opened in, so a night shift does
+        // not read as a negative day just because the viewer is elsewhere.
+        $zone = $attendance->timezone ?? $this->zoneFrom($attributes);
+        $now = now()->setTimezone($zone);
         $worked = $this->workedMinutes($attendance, $now);
 
         return DB::transaction(function () use ($attendance, $attributes, $now, $worked): Attendance {
             $attendance->update([
                 'check_out' => $now->format('H:i:s'),
+                'check_out_at' => $now,
                 'worked_minutes' => $worked,
                 'overtime_minutes' => max(0, $worked - config('attendance.overtime_after_minutes')),
                 // A short day is a half day, unless they were already late,
@@ -127,6 +141,22 @@ class AttendanceService
             ->where('staff_id', $employee->id)
             ->whereDate('work_date', $date)
             ->first();
+    }
+
+    /**
+     * The zone the browser reported, falling back to the workspace's own.
+     *
+     * Validated at the controller, but checked again here because the fallback
+     * has to be a real zone: an unknown identifier would throw inside Carbon
+     * rather than merely being wrong.
+     */
+    private function zoneFrom(array $attributes): string
+    {
+        $zone = $attributes['timezone'] ?? null;
+
+        return is_string($zone) && in_array($zone, timezone_identifiers_list(), strict: true)
+            ? $zone
+            : config('app.timezone');
     }
 
     /** @return array{id: int|null, starts_at: string, ends_at: string, grace_minutes: int, break_minutes: int} */

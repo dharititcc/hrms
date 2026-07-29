@@ -9,7 +9,7 @@ import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useEmployees } from "@/hooks/use-employees"
-import { mapsLink } from "@/services/attendance-service"
+import { formatRecordedTime, mapsLink } from "@/services/attendance-service"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { AttendanceRecord, AttendanceStatus } from "@/types/attendance"
@@ -179,8 +179,8 @@ function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; sh
         <span className="ml-2 text-xs text-muted-foreground">{workModeLabels[record.work_mode]}</span>
       </td>
       {showEmployee && <td className="px-5 py-4 text-muted-foreground">{record.employee_name ?? "—"}</td>}
-      <td className="px-5 py-4 tabular-nums">{record.check_in ?? "—"}</td>
-      <td className="px-5 py-4 tabular-nums">{record.check_out ?? "—"}</td>
+      <td className="px-5 py-4 tabular-nums">{formatRecordedTime(record.check_in_at, record.check_in, record.timezone)}</td>
+      <td className="px-5 py-4 tabular-nums">{formatRecordedTime(record.check_out_at, record.check_out, record.timezone)}</td>
       <td className="px-5 py-4 tabular-nums">
         {record.check_out ? record.worked_hours : "—"}
         {record.overtime_minutes > 0 && (

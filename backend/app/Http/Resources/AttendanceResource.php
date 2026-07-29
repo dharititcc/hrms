@@ -16,8 +16,14 @@ class AttendanceResource extends JsonResource
             'employee_name' => $this->whenLoaded('employee', fn () => $this->employee?->name),
             'work_date' => $this->work_date?->toDateString(),
 
+            // The wall clock where the employee was, and the instant it maps
+            // to. A viewer elsewhere is shown the instant in their own zone;
+            // the wall clock is what a shift start is compared against.
             'check_in' => $this->check_in,
             'check_out' => $this->check_out,
+            'check_in_at' => $this->check_in_at?->toISOString(),
+            'check_out_at' => $this->check_out_at?->toISOString(),
+            'timezone' => $this->timezone,
             'status' => $this->status->value,
             'work_mode' => $this->work_mode->value,
 

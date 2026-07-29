@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\WorkShift;
 use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -277,6 +278,67 @@ class AttendanceCaptureTest extends TestCase
         $this->postJson('/api/auth/attendance/check-in', [
             'employee_id' => $this->employee->id, 'latitude' => 48.8566, 'longitude' => 2.3522,
         ])->assertOk()->assertJsonPath('data.check_in_location.office', 'Paris');
+    }
+
+    public function test_the_day_is_recorded_in_the_browsers_timezone(): void
+    {
+        // 23:30 UTC on the 1st is 05:00 on the 2nd in Kolkata: a different
+        // clock time and a different working day.
+        $this->travelTo(Carbon::parse('2026-03-01 23:30:00', 'UTC'));
+        Sanctum::actingAs($this->owner);
+
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'Asia/Kolkata',
+        ])->assertOk()
+            ->assertJsonPath('data.check_in', '05:00:00')
+            ->assertJsonPath('data.work_date', '2026-03-02')
+            ->assertJsonPath('data.timezone', 'Asia/Kolkata')
+            // Early, so not late against an 09:00 shift where they are.
+            ->assertJsonPath('data.status', 'present');
+
+        // The instant is absolute, whatever zone it was recorded from.
+        $this->assertSame('2026-03-01T23:30:00.000000Z', Attendance::first()->check_in_at->utc()->toISOString());
+    }
+
+    public function test_the_same_instant_is_a_different_day_in_a_different_zone(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-01 23:30:00', 'UTC'));
+        Sanctum::actingAs($this->owner);
+
+        // New York is still on the 1st, and 18:30 is nowhere near a 09:00 start.
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'America/New_York',
+        ])->assertOk()
+            ->assertJsonPath('data.check_in', '18:30:00')
+            ->assertJsonPath('data.work_date', '2026-03-01');
+    }
+
+    public function test_an_unknown_timezone_is_refused(): void
+    {
+        Sanctum::actingAs($this->owner);
+
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'Mars/Olympus_Mons',
+        ])->assertStatus(422)->assertJsonValidationErrors('timezone');
+    }
+
+    public function test_check_out_closes_the_day_in_the_zone_it_was_opened_in(): void
+    {
+        $this->travelTo(Carbon::parse('2026-03-02 03:30:00', 'UTC'));
+        Sanctum::actingAs($this->owner);
+
+        $id = $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'timezone' => 'Asia/Kolkata',
+        ])->assertOk()->json('data.id');
+
+        $this->travelTo(Carbon::parse('2026-03-02 12:30:00', 'UTC'));
+
+        // Checking out from a browser in another zone must not restate the
+        // day in that zone: 18:00 in Kolkata, not 07:30 in New York.
+        $this->postJson("/api/auth/attendance/{$id}/check-out", ['timezone' => 'America/New_York'])
+            ->assertOk()
+            ->assertJsonPath('data.check_out', '18:00:00')
+            ->assertJsonPath('data.worked_minutes', 480);
     }
 
     public function test_distance_uses_a_great_circle_not_a_flat_approximation(): void

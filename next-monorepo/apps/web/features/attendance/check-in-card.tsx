@@ -6,7 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { attendanceStatusLabels, attendanceStatusStyles, formatMinutes, workModeLabels } from "@/features/attendance/labels"
 import { useAttendanceMutations, useTodayAttendance } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
-import { capturePosition, mapsLink } from "@/services/attendance-service"
+import { capturePosition, formatRecordedTime, mapsLink } from "@/services/attendance-service"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { WorkMode } from "@/types/attendance"
@@ -105,8 +105,8 @@ export function CheckInCard({ employeeId }: { employeeId: number | null }) {
       ) : (
         <>
           <dl className="mt-5 grid gap-4 sm:grid-cols-3">
-            <Fact label="Checked in" value={today?.check_in ?? "—"} />
-            <Fact label="Checked out" value={today?.check_out ?? "—"} />
+            <Fact label="Checked in" value={formatRecordedTime(today?.check_in_at, today?.check_in, today?.timezone)} />
+            <Fact label="Checked out" value={formatRecordedTime(today?.check_out_at, today?.check_out, today?.timezone)} />
             <Fact
               label="Worked"
               value={today?.check_out ? today.worked_hours : today?.check_in ? "In progress" : "—"}

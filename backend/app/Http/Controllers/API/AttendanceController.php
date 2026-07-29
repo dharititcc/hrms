@@ -50,7 +50,13 @@ class AttendanceController extends Controller
 
         abort_if($employee === null, 404, 'This account is not linked to an employee record.');
 
-        $attendance = $this->service->forDate($employee, now()->toDateString());
+        $validated = $request->validate(['timezone' => ['nullable', 'timezone']]);
+
+        // "Today" is the caller's today. Reading it from the server's clock
+        // would hide this morning's check-in from somebody a day ahead.
+        $today = now()->setTimezone($validated['timezone'] ?? config('app.timezone'))->toDateString();
+
+        $attendance = $this->service->forDate($employee, $today);
 
         return response()->json([
             'data' => $attendance === null ? null : new AttendanceResource($attendance->load('checkInLocation')),
@@ -66,6 +72,9 @@ class AttendanceController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'address' => ['nullable', 'string', 'max:255'],
+            // What the browser reports, so the day is recorded where the
+            // employee actually is rather than where the server is.
+            'timezone' => ['nullable', 'timezone'],
         ]);
 
         $employee = $request->user()->workspaceEmployees()->findOrFail($validated['employee_id']);
@@ -94,6 +103,9 @@ class AttendanceController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
             'address' => ['nullable', 'string', 'max:255'],
+            // What the browser reports, so the day is recorded where the
+            // employee actually is rather than where the server is.
+            'timezone' => ['nullable', 'timezone'],
         ]);
 
         return response()->json([

@@ -11,15 +11,25 @@ export const attendanceService = {
   },
   /** The caller's own record for today, or null before they check in. */
   async today() {
-    const { data } = await apiClient.get<{ data: AttendanceRecord | null }>("/auth/attendance/today")
+    // Their today, not the server's: without this somebody a day ahead is
+    // shown nothing after checking in.
+    const { data } = await apiClient.get<{ data: AttendanceRecord | null }>("/auth/attendance/today", {
+      params: { timezone: browserTimezone() },
+    })
     return data.data
   },
   async checkIn(input: CheckInInput) {
-    const { data } = await apiClient.post<{ data: AttendanceRecord }>("/auth/attendance/check-in", input)
+    const { data } = await apiClient.post<{ data: AttendanceRecord }>("/auth/attendance/check-in", {
+      ...input,
+      timezone: browserTimezone(),
+    })
     return data.data
   },
   async checkOut(id: number, position?: CapturedPosition) {
-    const { data } = await apiClient.post<{ data: AttendanceRecord }>(`/auth/attendance/${id}/check-out`, position ?? {})
+    const { data } = await apiClient.post<{ data: AttendanceRecord }>(`/auth/attendance/${id}/check-out`, {
+      ...(position ?? {}),
+      timezone: browserTimezone(),
+    })
     return data.data
   },
   async approve(id: number) {
@@ -64,6 +74,47 @@ export function capturePosition(timeoutMs = 8000): Promise<CapturedPosition | nu
       { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 },
     )
   })
+}
+
+/**
+ * The zone this browser is in, which is what the day should be recorded
+ * against. Falls back to UTC on the rare engine that cannot report one.
+ */
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+  } catch {
+    return "UTC"
+  }
+}
+
+/**
+ * A recorded time, shown in the zone of whoever is looking at it.
+ *
+ * Prefers the absolute instant, so a manager in London reading an Indian
+ * colleague's day sees it in London time with the zone named. Records made
+ * before instants were stored have only a wall clock, which is shown as-is
+ * and labelled with the zone it was recorded in.
+ */
+export function formatRecordedTime(
+  instant: string | null | undefined,
+  wallClock: string | null | undefined,
+  recordedZone?: string | null,
+): string {
+  if (instant) {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(instant))
+  }
+
+  if (!wallClock) return "—"
+
+  // No instant to convert, so the best that can be said is where it was taken.
+  const zone = recordedZone ? ` (${recordedZone.split("/").pop()?.replace(/_/g, " ")})` : ""
+
+  return `${wallClock.slice(0, 5)}${zone}`
 }
 
 /** A link rather than an embed: embedding Maps needs an API key. */

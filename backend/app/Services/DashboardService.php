@@ -70,6 +70,9 @@ class DashboardService
             'my_attendance_id' => $mine?->id,
             'my_status' => $mine?->status?->value,
             'my_check_in' => $mine?->check_in,
+            // The instant too, so the dashboard can show it in the viewer's zone.
+            'my_check_in_at' => $mine?->check_in_at?->toISOString(),
+            'my_timezone' => $mine?->timezone,
         ];
 
         if (! $user->hasPermission(Module::Attendance, Action::ViewAll)) {
