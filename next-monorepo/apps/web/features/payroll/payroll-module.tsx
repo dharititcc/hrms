@@ -1,12 +1,15 @@
 "use client"
 
-import { DollarSign, Info } from "lucide-react"
+import { Download, DollarSign, Info } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { PayrollRuns } from "@/features/payroll/payroll-runs"
 import { SalaryStructures } from "@/features/payroll/salary-structures"
 import { usePayroll } from "@/hooks/use-phase-three"
+import { usePayslipDownload } from "@/hooks/use-payroll-runs"
 import { usePermissions } from "@/hooks/use-permissions"
+import { getApiErrorMessage } from "@/lib/api-error"
+import { useToast } from "@/providers/toast-provider"
 
 /**
  * Salary slips produced by payroll runs, and the configuration they are built
@@ -47,7 +50,18 @@ export function PayrollModule() {
 
 function SlipList() {
   const { data, isLoading, isError, refetch } = usePayroll()
+  const { can } = usePermissions()
+  const download = usePayslipDownload()
+  const { toast } = useToast()
   const slips = data?.data ?? []
+
+  const save = async (slip: { id: number; slip_number: string }) => {
+    try {
+      await download.mutateAsync({ id: slip.id, filename: `${slip.slip_number}.pdf` })
+    } catch (error) {
+      toast({ tone: "error", title: "Unable to download payslip", description: getApiErrorMessage(error) })
+    }
+  }
 
   return (
     <>
@@ -87,6 +101,7 @@ function SlipList() {
                     <th className="px-5 py-3 font-medium">Gross</th>
                     <th className="px-5 py-3 font-medium">Deductions</th>
                     <th className="px-5 py-3 font-medium">Net</th>
+                    <th className="px-5 py-3"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -98,6 +113,21 @@ function SlipList() {
                       <td className="px-5 py-4 tabular-nums">{slip.currency_symbol}{slip.gross_salary}</td>
                       <td className="px-5 py-4 tabular-nums text-muted-foreground">{slip.currency_symbol}{slip.total_deductions}</td>
                       <td className="px-5 py-4 font-medium tabular-nums">{slip.currency_symbol}{slip.net_salary}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end">
+                          {can("payroll.download") && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Download payslip ${slip.slip_number}`}
+                              isDisabled={download.isPending}
+                              onPress={() => void save(slip)}
+                            >
+                              <Download />
+                            </Button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

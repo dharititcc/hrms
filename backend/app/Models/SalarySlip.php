@@ -41,6 +41,12 @@ class SalarySlip extends Model
         return $this->belongsTo(PayrollRun::class, 'payroll_run_id');
     }
 
+    /** Stands in for the employer on a printed payslip. */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
     public function staff(): BelongsTo
     {
         return $this->belongsTo(Staff::class);

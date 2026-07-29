@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
-  GeneratePayrollInput, PayrollRun, PayrollRunListResponse, RecordPaymentInput,
+  GeneratePayrollInput, PayrollRun, PayrollRunListResponse,
+  PayslipDeliveryResult, RecordPaymentInput,
   SalaryAssignment, SalaryAssignmentInput, SalaryPayment, SalaryPaymentListResponse,
   SalaryComponent, SalaryComponentInput, SalaryComponentListResponse,
   SalaryStructure, SalaryStructureInput, SalaryStructureListResponse,
@@ -107,6 +108,40 @@ export const payrollService = {
   },
   async reversePayment(id: number) {
     await apiClient.delete(`/auth/salary-payments/${id}`)
+  },
+
+  /**
+   * The payslip PDF.
+   *
+   * Fetched as a blob rather than linked to directly: the API authenticates
+   * with a bearer token from an interceptor, and a plain anchor would arrive
+   * without it and be rejected.
+   */
+  async downloadPayslip(slipId: number, filename: string) {
+    const response = await apiClient.get<Blob>(`/auth/salary-slips/${slipId}/download`, { responseType: "blob" })
+    const url = URL.createObjectURL(response.data)
+
+    try {
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = filename
+      anchor.click()
+    } finally {
+      // Revoking immediately is safe: the click has already handed the blob to
+      // the browser's download manager.
+      URL.revokeObjectURL(url)
+    }
+  },
+
+  async emailRun(runId: number, resend = false) {
+    const { data } = await apiClient.post<{ message: string; meta: PayslipDeliveryResult }>(
+      `/auth/payroll-runs/${runId}/email`, { resend },
+    )
+    return data
+  },
+  async emailSlip(slipId: number) {
+    const { data } = await apiClient.post<{ message: string }>(`/auth/salary-slips/${slipId}/email`)
+    return data
   },
 }
 

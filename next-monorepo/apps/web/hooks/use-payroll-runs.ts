@@ -46,7 +46,20 @@ export function usePayrollRunMutations() {
   const approve = useMutation({ mutationFn: (id: number) => payrollService.approveRun(id), onSuccess: (run) => refresh(run.id) })
   const cancel = useMutation({ mutationFn: (id: number) => payrollService.cancelRun(id), onSuccess: (run) => refresh(run.id) })
 
-  return { generate, regenerate, remove, submit, approve, cancel }
+  const email = useMutation({
+    mutationFn: ({ id, resend }: { id: number; resend?: boolean }) => payrollService.emailRun(id, resend),
+    // Sending stamps emailed_at on every slip it reached.
+    onSuccess: () => refresh(),
+  })
+
+  return { generate, regenerate, remove, submit, approve, cancel, email }
+}
+
+/** Downloading changes no server state, so it is a mutation only for its pending flag. */
+export function usePayslipDownload() {
+  return useMutation({
+    mutationFn: ({ id, filename }: { id: number; filename: string }) => payrollService.downloadPayslip(id, filename),
+  })
 }
 
 export function useSlipPayments(slipId: number | null) {

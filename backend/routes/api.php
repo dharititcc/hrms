@@ -18,6 +18,7 @@ use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\PayrollRunController;
+use App\Http\Controllers\API\PayslipController;
 use App\Http\Controllers\API\PermissionController;
 use App\Http\Controllers\API\SalaryAssignmentController;
 use App\Http\Controllers\API\SalaryComponentController;
@@ -126,6 +127,16 @@ Route::prefix('auth')->group(function () {
         Route::patch('/payroll-runs/{run}/submit', [PayrollRunController::class, 'submit'])->middleware('can:payroll.edit');
         Route::patch('/payroll-runs/{run}/approve', [PayrollRunController::class, 'approve'])->middleware('can:payroll.approve');
         Route::patch('/payroll-runs/{run}/cancel', [PayrollRunController::class, 'cancel'])->middleware('can:payroll.approve');
+
+        /*
+        | Download is the one payroll route an employee reaches: they hold
+        | payroll.download but not view-all, so RecordScope in the controller
+        | is what limits them to their own payslip.
+        */
+        Route::get('/salary-slips/{slip}/download', [PayslipController::class, 'download'])
+            ->middleware('can:payroll.download')->name('payslips.download');
+        Route::post('/salary-slips/{slip}/email', [PayslipController::class, 'email'])->middleware('can:payroll.export');
+        Route::post('/payroll-runs/{run}/email', [PayslipController::class, 'emailRun'])->middleware('can:payroll.export');
 
         Route::get('/salary-slips/{slip}/payments', [SalaryPaymentController::class, 'index'])->middleware('can:payroll.view-all');
         Route::post('/salary-slips/{slip}/payments', [SalaryPaymentController::class, 'store'])->middleware('can:payroll.pay');

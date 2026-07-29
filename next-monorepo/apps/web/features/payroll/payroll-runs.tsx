@@ -1,12 +1,12 @@
 "use client"
 
-import { AlertTriangle, ArrowLeft, Ban, CalendarRange, Check, Play, RefreshCw, Send, Trash2, Wallet } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Ban, CalendarRange, Check, Download, Mail, Play, RefreshCw, Send, Trash2, Wallet } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { GenerateRunDialog } from "@/features/payroll/generate-run-dialog"
 import { PaymentDialog } from "@/features/payroll/payment-dialog"
 import { useSalaryComponents } from "@/hooks/use-payroll-config"
-import { usePayrollRun, usePayrollRunMutations, usePayrollRuns } from "@/hooks/use-payroll-runs"
+import { usePayrollRun, usePayrollRunMutations, usePayrollRuns, usePayslipDownload } from "@/hooks/use-payroll-runs"
 import { usePermissions } from "@/hooks/use-permissions"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
@@ -134,7 +134,8 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const { can } = usePermissions()
   const { data: run, isLoading } = usePayrollRun(id)
   const { data: componentData } = useSalaryComponents({})
-  const { regenerate, submit, approve, cancel } = usePayrollRunMutations()
+  const { regenerate, submit, approve, cancel, email } = usePayrollRunMutations()
+  const download = usePayslipDownload()
   const { toast } = useToast()
 
   // staff id => component code => amount, as the generator expects it.
@@ -155,6 +156,32 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const slips = run.slips ?? []
   const canRecalculate = can("payroll.generate") && run.is_editable
   const canPay = can("payroll.pay") && (run.status === "approved" || run.status === "paid")
+  // A payslip only exists as a document once the figures are committed.
+  const issued = run.status === "approved" || run.status === "paid"
+
+  const emailAll = async (resend: boolean) => {
+    if (resend && !window.confirm("Send every payslip in this run again, including those already sent?")) return
+    try {
+      const result = await email.mutateAsync({ id: run.id, resend })
+      toast({
+        tone: result.meta.sent > 0 ? "success" : "error",
+        title: result.message,
+        description: result.meta.skipped_without_account > 0
+          ? "Employees without an account were skipped — invite them first so salary figures only go to a proven address."
+          : undefined,
+      })
+    } catch (error) {
+      toast({ tone: "error", title: "Unable to send payslips", description: getApiErrorMessage(error) })
+    }
+  }
+
+  const savePayslip = async (slip: SalarySlip) => {
+    try {
+      await download.mutateAsync({ id: slip.id, filename: `${slip.slip_number}.pdf` })
+    } catch (error) {
+      toast({ tone: "error", title: "Unable to download payslip", description: getApiErrorMessage(error) })
+    }
+  }
 
   const unfilled = slips.reduce((total, slip) => total + (slip.lines ?? [])
     .filter((line) => manualCodes.has(line.code) && Number(line.amount) === 0).length, 0)
@@ -246,6 +273,12 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
             </Button>
           )}
 
+          {can("payroll.export") && issued && (
+            <Button variant="outline" isDisabled={email.isPending} onPress={() => void emailAll(false)}>
+              <Mail />{email.isPending ? "Sending…" : "Email payslips"}
+            </Button>
+          )}
+
           {can("payroll.approve") && run.status !== "cancelled" && run.status !== "paid" && (
             <Button
               variant="outline"
@@ -310,6 +343,7 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
                 [slip.staff_id]: { ...current[slip.staff_id], [code]: value },
               }))}
               onPay={canPay ? () => setPaying(slip) : undefined}
+              onDownload={issued && can("payroll.download") ? () => void savePayslip(slip) : undefined}
             />
           ))}
         </div>
@@ -320,13 +354,14 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   )
 }
 
-function SlipCard({ slip, manualCodes, editable, values, onChange, onPay }: {
+function SlipCard({ slip, manualCodes, editable, values, onChange, onPay, onDownload }: {
   slip: SalarySlip
   manualCodes: Set<string>
   editable: boolean
   values: Record<string, string>
   onChange: (code: string, value: string) => void
   onPay?: () => void
+  onDownload?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const lines = slip.lines ?? []
@@ -353,14 +388,21 @@ function SlipCard({ slip, manualCodes, editable, values, onChange, onPay }: {
           </div>
         </button>
 
-        {onPay && (
-          <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${settled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
-              {salarySlipStatusLabels[slip.status]}
-            </span>
-            <Button variant="outline" size="sm" onPress={onPay}><Wallet />{settled ? "Payments" : "Pay"}</Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {onPay && (
+            <>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${settled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"}`}>
+                {salarySlipStatusLabels[slip.status]}
+              </span>
+              <Button variant="outline" size="sm" onPress={onPay}><Wallet />{settled ? "Payments" : "Pay"}</Button>
+            </>
+          )}
+          {onDownload && (
+            <Button variant="ghost" size="icon-sm" aria-label={`Download payslip ${slip.slip_number}`} onPress={onDownload}>
+              <Download />
+            </Button>
+          )}
+        </div>
       </div>
 
       {open && (

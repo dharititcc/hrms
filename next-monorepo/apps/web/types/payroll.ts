@@ -106,6 +106,13 @@ export type SalaryPaymentListResponse = {
   }
 }
 
+export type PayslipDeliveryResult = {
+  sent: number
+  /** No account yet, so there is nobody proven to send salary figures to. */
+  skipped_without_account: number
+  skipped_already_sent: number
+}
+
 export type RecordPaymentInput = {
   amount: number
   paid_at?: string | null
