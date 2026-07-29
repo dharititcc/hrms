@@ -3,6 +3,7 @@
 import { ListChecks, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useTaskChecklist, useTaskChecklistMutations } from "@/hooks/use-task-detail"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
@@ -12,7 +13,10 @@ export function TaskChecklist({ taskId }: { taskId: number }) {
   const { data: items, isLoading } = useTaskChecklist(taskId)
   const { add, toggle, remove } = useTaskChecklistMutations(taskId)
   const { toast } = useToast()
+  const { can } = usePermissions()
   const [title, setTitle] = useState("")
+  // Checklist changes are edits to the task.
+  const editable = can("tasks.edit")
 
   const list = items ?? []
   const done = list.filter((item) => item.is_completed).length
@@ -67,27 +71,30 @@ export function TaskChecklist({ taskId }: { taskId: number }) {
               <input
                 type="checkbox"
                 checked={item.is_completed}
+                disabled={!editable}
                 onChange={() => void toggleItem(item)}
                 aria-label={item.title}
-                className="size-4 rounded border"
+                className="size-4 rounded border disabled:opacity-50"
               />
               <span className={`flex-1 text-sm ${item.is_completed ? "text-muted-foreground line-through" : ""}`}>{item.title}</span>
               {item.completed_by_name && <span className="text-xs text-muted-foreground">{item.completed_by_name}</span>}
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Delete ${item.title}`}
-                className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                onPress={() => void removeItem(item)}
-              >
-                <Trash2 />
-              </Button>
+              {editable && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Delete ${item.title}`}
+                  className="opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                  onPress={() => void removeItem(item)}
+                >
+                  <Trash2 />
+                </Button>
+              )}
             </li>
           ))}
         </ul>
       )}
 
-      <form onSubmit={addItem} className="mt-3 flex gap-2">
+      {editable && <form onSubmit={addItem} className="mt-3 flex gap-2">
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
@@ -96,7 +103,7 @@ export function TaskChecklist({ taskId }: { taskId: number }) {
           className="h-9 flex-1 rounded-lg border bg-background px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/20"
         />
         <Button type="submit" variant="outline" size="sm" isDisabled={!title.trim() || add.isPending}><Plus />Add</Button>
-      </form>
+      </form>}
     </section>
   )
 }

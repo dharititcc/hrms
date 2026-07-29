@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { TaskFormDialog } from "@/features/projects/task-form-dialog"
 import { taskPriorityLabels, taskPriorityStyles, taskStatusLabels, taskStatusOrder } from "@/features/projects/labels"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useProjectTasks, useProjectTaskMutations } from "@/hooks/use-projects"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
@@ -13,6 +14,7 @@ import type { Project, ProjectTask, TaskStatus } from "@/types/project"
 
 export function ProjectBoard({ project }: { project: Project }) {
   const { toast } = useToast()
+  const { can } = usePermissions()
   const { data: tasks, isLoading, isError, refetch } = useProjectTasks(project.id)
   const { move, remove } = useProjectTaskMutations(project.id)
   const [dragOver, setDragOver] = useState<TaskStatus | null>(null)
@@ -77,7 +79,7 @@ export function ProjectBoard({ project }: { project: Project }) {
                     <h3 className="text-sm font-semibold">{taskStatusLabels[status]}</h3>
                     <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{columnTasks.length}</span>
                   </div>
-                  <Button variant="ghost" size="icon-sm" aria-label={`Add task to ${taskStatusLabels[status]}`} onPress={() => openCreate(status)}><Plus /></Button>
+                  {can("tasks.create") && <Button variant="ghost" size="icon-sm" aria-label={`Add task to ${taskStatusLabels[status]}`} onPress={() => openCreate(status)}><Plus /></Button>}
                 </header>
 
                 {isLoading ? (
@@ -89,9 +91,9 @@ export function ProjectBoard({ project }: { project: Project }) {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onMove={(target) => void moveTask(task, target)}
-                      onEdit={() => { setDialogStatus(task.status); setDialogTask(task) }}
-                      onDelete={() => void confirmDelete(task)}
+                      onMove={can("tasks.edit") ? (target) => void moveTask(task, target) : undefined}
+                      onEdit={can("tasks.edit") ? () => { setDialogStatus(task.status); setDialogTask(task) } : undefined}
+                      onDelete={can("tasks.delete") ? () => void confirmDelete(task) : undefined}
                     />
                   ))
                 )}
@@ -113,17 +115,18 @@ export function ProjectBoard({ project }: { project: Project }) {
   )
 }
 
-function TaskCard({ task, onMove, onEdit, onDelete }: { task: ProjectTask; onMove: (status: TaskStatus) => void; onEdit: () => void; onDelete: () => void }) {
+function TaskCard({ task, onMove, onEdit, onDelete }: { task: ProjectTask; onMove?: (status: TaskStatus) => void; onEdit?: () => void; onDelete?: () => void }) {
   const index = taskStatusOrder.indexOf(task.status)
   const previous = taskStatusOrder[index - 1]
   const next = taskStatusOrder[index + 1]
   const assignees = task.assignees ?? []
+  const movable = Boolean(onMove)
 
   return (
     <article
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData("text/plain", String(task.id))}
-      className="grid cursor-grab gap-2 rounded-xl border bg-background p-3 shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+      draggable={movable}
+      onDragStart={movable ? (event) => event.dataTransfer.setData("text/plain", String(task.id)) : undefined}
+      className={`grid gap-2 rounded-xl border bg-background p-3 shadow-sm transition-shadow hover:shadow-md ${movable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <Link href={`/dashboard/tasks/${task.id}`} className="text-sm font-medium hover:underline">{task.subject}</Link>
@@ -141,17 +144,23 @@ function TaskCard({ task, onMove, onEdit, onDelete }: { task: ProjectTask; onMov
         {task.is_billable && <span className="rounded-full bg-muted px-2 py-0.5">Billable</span>}
       </div>
 
-      <div className="flex items-center justify-between border-t pt-2">
-        {/* Keyboard-accessible equivalent of dragging between columns. */}
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon-xs" aria-label={previous ? `Move “${task.subject}” to ${taskStatusLabels[previous]}` : "Already in the first column"} isDisabled={!previous} onPress={() => previous && onMove(previous)}><ChevronLeft /></Button>
-          <Button variant="ghost" size="icon-xs" aria-label={next ? `Move “${task.subject}” to ${taskStatusLabels[next]}` : "Already in the last column"} isDisabled={!next} onPress={() => next && onMove(next)}><ChevronRight /></Button>
+      {(onMove || onEdit || onDelete) && (
+        <div className="flex items-center justify-between border-t pt-2">
+          {/* Keyboard-accessible equivalent of dragging between columns. */}
+          <div className="flex gap-1">
+            {onMove && (
+              <>
+                <Button variant="ghost" size="icon-xs" aria-label={previous ? `Move “${task.subject}” to ${taskStatusLabels[previous]}` : "Already in the first column"} isDisabled={!previous} onPress={() => previous && onMove(previous)}><ChevronLeft /></Button>
+                <Button variant="ghost" size="icon-xs" aria-label={next ? `Move “${task.subject}” to ${taskStatusLabels[next]}` : "Already in the last column"} isDisabled={!next} onPress={() => next && onMove(next)}><ChevronRight /></Button>
+              </>
+            )}
+          </div>
+          <div className="flex gap-1">
+            {onEdit && <Button variant="ghost" size="icon-xs" aria-label={`Edit ${task.subject}`} onPress={onEdit}><Edit3 /></Button>}
+            {onDelete && <Button variant="ghost" size="icon-xs" aria-label={`Delete ${task.subject}`} onPress={onDelete}><Trash2 /></Button>}
+          </div>
         </div>
-        <div className="flex gap-1">
-          <Button variant="ghost" size="icon-xs" aria-label={`Edit ${task.subject}`} onPress={onEdit}><Edit3 /></Button>
-          <Button variant="ghost" size="icon-xs" aria-label={`Delete ${task.subject}`} onPress={onDelete}><Trash2 /></Button>
-        </div>
-      </div>
+      )}
     </article>
   )
 }

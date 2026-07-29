@@ -8,6 +8,7 @@ import { MeetingFormDialog } from "@/features/meetings/meeting-form-dialog"
 import { meetingStatusLabels, meetingStatusStyles, meetingTypeLabels, rsvpLabels, rsvpStyles } from "@/features/meetings/labels"
 import { formatRange, toLocal } from "@/features/meetings/calendar-utils"
 import { useMeeting, useMeetingMutations } from "@/hooks/use-meetings"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useAuthStore } from "@/store/auth-store"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
@@ -19,6 +20,7 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
   const { data: meeting, isLoading, isError, refetch } = useMeeting(meetingId)
   const { respond, cancel, attendance } = useMeetingMutations(meetingId)
   const { user } = useAuthStore()
+  const { can } = usePermissions()
   const { toast } = useToast()
   const [editing, setEditing] = useState(false)
 
@@ -47,6 +49,13 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
   const myRsvp = meeting.participants?.find((participant) => participant.user_id === user?.id)
   const starts = toLocal(meeting.starts_at)
   const isPast = new Date(meeting.ends_at) < new Date()
+  /*
+   * The policy lets the host or organiser manage their own meeting regardless
+   * of role, so gating on meetings.edit alone would hide the controls from the
+   * very person running it.
+   */
+  const isHostOrOrganizer = user?.id === meeting.host_id || user?.id === meeting.organizer_id
+  const canManage = can("meetings.edit") || isHostOrOrganizer
 
   const sendRsvp = async (rsvp: RsvpStatus) => {
     try {
@@ -96,8 +105,8 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onPress={() => setEditing(true)}><Edit3 />Edit</Button>
-            {meeting.status !== "cancelled" && <Button variant="destructive" onPress={() => void cancelMeeting()}><Ban />Cancel</Button>}
+            {canManage && <Button variant="outline" onPress={() => setEditing(true)}><Edit3 />Edit</Button>}
+            {canManage && meeting.status !== "cancelled" && <Button variant="destructive" onPress={() => void cancelMeeting()}><Ban />Cancel</Button>}
           </div>
         </div>
       </div>
@@ -162,7 +171,7 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
               <span className="text-sm font-medium">{participant.name ?? "Removed user"}</span>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${rsvpStyles[participant.rsvp]}`}>{rsvpLabels[participant.rsvp]}</span>
               {/* Attendance is only meaningful once the meeting has happened. */}
-              {isPast && (
+              {isPast && canManage && (
                 <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
                   <input
                     type="checkbox"

@@ -9,6 +9,7 @@ import { MeetingFormDialog } from "@/features/meetings/meeting-form-dialog"
 import { meetingStatusLabels, meetingStatusStyles, meetingTypeLabels } from "@/features/meetings/labels"
 import { formatRange, shiftToDay, toLocal, viewRange, type CalendarView } from "@/features/meetings/calendar-utils"
 import { useMeetings, useMeetingMutations } from "@/hooks/use-meetings"
+import { usePermissions } from "@/hooks/use-permissions"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Meeting, MeetingStatus, MeetingType } from "@/types/meeting"
@@ -32,7 +33,10 @@ export function MeetingsModule() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const { toast } = useToast()
+  const { can } = usePermissions()
   const { reschedule } = useMeetingMutations()
+  // Dragging reschedules, so the grid is only interactive for those who may edit.
+  const canReschedule = can("meetings.edit")
 
   const range = viewRange(view, anchor)
   const filters = {
@@ -77,7 +81,7 @@ export function MeetingsModule() {
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Meetings</h1>
           <p className="mt-2 text-sm text-muted-foreground">Times are shown in your local timezone.</p>
         </div>
-        <Button onPress={() => setDialogOpen(true)}><Plus />New meeting</Button>
+        {can("meetings.create") && <Button onPress={() => setDialogOpen(true)}><Plus />New meeting</Button>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-background p-3">
@@ -141,7 +145,13 @@ export function MeetingsModule() {
         </div>
       ) : mode === "calendar" ? (
         <div className={isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}>
-          <MeetingCalendar view={view} anchor={anchor} meetings={meetings} isLoading={isLoading} onMove={(meeting, target) => void moveMeeting(meeting, target)} />
+          <MeetingCalendar
+            view={view}
+            anchor={anchor}
+            meetings={meetings}
+            isLoading={isLoading}
+            onMove={canReschedule ? (meeting, target) => void moveMeeting(meeting, target) : undefined}
+          />
         </div>
       ) : (
         <MeetingList meetings={meetings} isLoading={isLoading} meta={meta} onPage={setPage} />

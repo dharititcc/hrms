@@ -4,6 +4,7 @@ import { AtSign, MessageSquare, Reply, Send, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { MentionText, mentionToken } from "@/features/tasks/mention-text"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useTaskComments, useTaskCommentMutations } from "@/hooks/use-task-detail"
 import { useWorkspaceUsers } from "@/hooks/use-projects"
 import { getApiErrorMessage } from "@/lib/api-error"
@@ -14,7 +15,10 @@ export function TaskComments({ taskId }: { taskId: number }) {
   const { data: comments, isLoading } = useTaskComments(taskId)
   const { add, remove } = useTaskCommentMutations(taskId)
   const { toast } = useToast()
+  const { can } = usePermissions()
   const [replyTo, setReplyTo] = useState<number | null>(null)
+  // Commenting is its own permission, so read-only roles can still take part.
+  const canComment = can("tasks.comment")
 
   const submit = async (body: string, parentId: number | null) => {
     try {
@@ -45,9 +49,11 @@ export function TaskComments({ taskId }: { taskId: number }) {
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal text-muted-foreground">{thread.length}</span>
       </h2>
 
-      <div className="mt-4">
-        <CommentComposer onSubmit={(body) => submit(body, null)} placeholder="Write a comment…" />
-      </div>
+      {canComment && (
+        <div className="mt-4">
+          <CommentComposer onSubmit={(body) => submit(body, null)} placeholder="Write a comment…" />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="mt-5 grid gap-3">{[1, 2].map((row) => <div key={row} className="h-16 animate-pulse rounded-xl bg-muted" />)}</div>
@@ -57,7 +63,7 @@ export function TaskComments({ taskId }: { taskId: number }) {
         <ol className="mt-5 grid gap-4">
           {thread.map((comment) => (
             <li key={comment.id} className="grid gap-3">
-              <CommentCard comment={comment} onReply={() => setReplyTo(replyTo === comment.id ? null : comment.id)} onDelete={() => confirmDelete(comment)} />
+              <CommentCard comment={comment} onReply={canComment ? () => setReplyTo(replyTo === comment.id ? null : comment.id) : undefined} onDelete={() => confirmDelete(comment)} />
 
               {(comment.replies ?? []).length > 0 && (
                 <ol className="ml-6 grid gap-3 border-l pl-4">

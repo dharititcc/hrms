@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { ProjectFormDialog } from "@/features/projects/project-form-dialog"
 import { projectStatusLabels, projectStatusStyles } from "@/features/projects/labels"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects, useProjectMutations } from "@/hooks/use-projects"
 import { useToast } from "@/providers/toast-provider"
 import { getApiErrorMessage } from "@/lib/api-error"
@@ -17,6 +18,7 @@ export function ProjectsModule() {
   const [page, setPage] = useState(1)
   const [dialogProject, setDialogProject] = useState<Project | null | undefined>(undefined)
   const { toast } = useToast()
+  const { can } = usePermissions()
   const { remove } = useProjectMutations()
   const { data, isLoading, isError, refetch } = useProjects({ search: search || undefined, status, page })
 
@@ -42,7 +44,7 @@ export function ProjectsModule() {
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Projects</h1>
           <p className="mt-2 text-sm text-muted-foreground">Plan work, assign your team, and track progress on a board.</p>
         </div>
-        <Button onPress={() => setDialogProject(null)}><Plus />New project</Button>
+        {can("projects.create") && <Button onPress={() => setDialogProject(null)}><Plus />New project</Button>}
       </div>
 
       <div className="flex flex-col gap-3 rounded-2xl border bg-background p-4 sm:flex-row">
@@ -105,7 +107,14 @@ export function ProjectsModule() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {projects.map((project) => <ProjectRow key={project.id} project={project} onEdit={() => setDialogProject(project)} onDelete={() => confirmDelete(project)} />)}
+                  {projects.map((project) => (
+                    <ProjectRow
+                      key={project.id}
+                      project={project}
+                      onEdit={can("projects.edit") ? () => setDialogProject(project) : undefined}
+                      onDelete={can("projects.delete") ? () => confirmDelete(project) : undefined}
+                    />
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -133,7 +142,7 @@ export function ProjectsModule() {
   )
 }
 
-function ProjectRow({ project, onEdit, onDelete }: { project: Project; onEdit: () => void; onDelete: () => void }) {
+function ProjectRow({ project, onEdit, onDelete }: { project: Project; onEdit?: () => void; onDelete?: () => void }) {
   const total = project.tasks_total ?? 0
   const done = project.tasks_done ?? 0
   const percent = total === 0 ? 0 : Math.round((done / total) * 100)
@@ -160,8 +169,8 @@ function ProjectRow({ project, onEdit, onDelete }: { project: Project; onEdit: (
       <td className="px-5 py-4 text-xs text-muted-foreground">{project.start_date || "—"} → {project.end_date || "—"}</td>
       <td className="px-5 py-4">
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="icon-sm" aria-label={`Edit ${project.name}`} onPress={onEdit}><Edit3 /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label={`Delete ${project.name}`} onPress={onDelete}><Trash2 /></Button>
+          {onEdit && <Button variant="ghost" size="icon-sm" aria-label={`Edit ${project.name}`} onPress={onEdit}><Edit3 /></Button>}
+          {onDelete && <Button variant="ghost" size="icon-sm" aria-label={`Delete ${project.name}`} onPress={onDelete}><Trash2 /></Button>}
         </div>
       </td>
     </tr>

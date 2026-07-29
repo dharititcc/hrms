@@ -19,7 +19,8 @@ export function MeetingCalendar({ view, anchor, meetings, isLoading, onMove }: {
   anchor: Date
   meetings: Meeting[]
   isLoading: boolean
-  onMove: (meeting: Meeting, target: Date) => void
+  /** Omitted when the viewer may not reschedule; the grid then reads only. */
+  onMove?: (meeting: Meeting, target: Date) => void
 }) {
   const byDay = groupByDay(meetings)
 
@@ -27,13 +28,13 @@ export function MeetingCalendar({ view, anchor, meetings, isLoading, onMove }: {
     return <div className="h-[32rem] animate-pulse rounded-2xl bg-muted" />
   }
 
-  if (view === "month") return <MonthView anchor={anchor} byDay={byDay} onMove={onMove} />
+  if (view === "month") return <MonthView anchor={anchor} byDay={byDay} onMove={onMove} draggable={Boolean(onMove)} />
   if (view === "week") return <WeekView anchor={anchor} byDay={byDay} />
   if (view === "day") return <DayView anchor={anchor} byDay={byDay} />
   return <AgendaView meetings={meetings} />
 }
 
-function MonthView({ anchor, byDay, onMove }: { anchor: Date; byDay: Map<string, Meeting[]>; onMove: (meeting: Meeting, target: Date) => void }) {
+function MonthView({ anchor, byDay, onMove, draggable }: { anchor: Date; byDay: Map<string, Meeting[]>; onMove?: (meeting: Meeting, target: Date) => void; draggable: boolean }) {
   const [dragOver, setDragOver] = useState<string | null>(null)
   const days = monthGrid(anchor)
   const currentMonth = startOfMonth(anchor).getMonth()
@@ -54,15 +55,15 @@ function MonthView({ anchor, byDay, onMove }: { anchor: Date; byDay: Map<string,
           return (
             <div
               key={key}
-              onDragOver={(event) => { event.preventDefault(); setDragOver(key) }}
-              onDragLeave={() => setDragOver((current) => (current === key ? null : current))}
-              onDrop={(event) => {
+              onDragOver={draggable ? (event) => { event.preventDefault(); setDragOver(key) } : undefined}
+              onDragLeave={draggable ? () => setDragOver((current) => (current === key ? null : current)) : undefined}
+              onDrop={draggable ? (event) => {
                 event.preventDefault()
                 setDragOver(null)
                 const id = Number(event.dataTransfer.getData("text/plain"))
                 const meeting = [...byDay.values()].flat().find((item) => item.id === id)
-                if (meeting) onMove(meeting, day)
-              }}
+                if (meeting) onMove?.(meeting, day)
+              } : undefined}
               className={`min-h-28 border-b border-r p-1.5 transition-colors ${outside ? "bg-muted/20" : ""} ${dragOver === key ? "bg-primary/5 ring-1 ring-ring ring-inset" : ""}`}
             >
               <div className="flex items-center justify-between px-1">
@@ -72,7 +73,7 @@ function MonthView({ anchor, byDay, onMove }: { anchor: Date; byDay: Map<string,
               </div>
 
               <div className="mt-1 grid gap-1">
-                {dayMeetings.slice(0, 3).map((meeting) => <MonthChip key={meeting.id} meeting={meeting} />)}
+                {dayMeetings.slice(0, 3).map((meeting) => <MonthChip key={meeting.id} meeting={meeting} draggable={draggable} />)}
                 {dayMeetings.length > 3 && (
                   <span className="px-1 text-[0.7rem] text-muted-foreground">+{dayMeetings.length - 3} more</span>
                 )}
@@ -85,13 +86,13 @@ function MonthView({ anchor, byDay, onMove }: { anchor: Date; byDay: Map<string,
   )
 }
 
-function MonthChip({ meeting }: { meeting: Meeting }) {
+function MonthChip({ meeting, draggable }: { meeting: Meeting; draggable: boolean }) {
   return (
     <Link
       href={`/dashboard/meetings/${meeting.id}`}
-      draggable
-      onDragStart={(event) => event.dataTransfer.setData("text/plain", String(meeting.id))}
-      className={`block cursor-grab truncate rounded px-1.5 py-0.5 text-[0.7rem] active:cursor-grabbing ${meetingStatusStyles[meeting.status]}`}
+      draggable={draggable}
+      onDragStart={draggable ? (event) => event.dataTransfer.setData("text/plain", String(meeting.id)) : undefined}
+      className={`block truncate rounded px-1.5 py-0.5 text-[0.7rem] ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${meetingStatusStyles[meeting.status]}`}
       title={`${formatRange(meeting)} — ${meeting.title}`}
     >
       {formatTime(toLocal(meeting.starts_at))} {meeting.title}

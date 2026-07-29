@@ -8,22 +8,29 @@ import { useTheme } from "next-themes"
 import { Button } from "@workspace/ui/components/button"
 import { BrandMark } from "@/components/brand-mark"
 import { ProtectedRoute } from "@/features/auth/route-guards"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useAuthStore } from "@/store/auth-store"
+import type { Permission } from "@/types/permission"
 
-const NAV = [
+/**
+ * `permission` is the module.action a role needs to reach the page. Entries
+ * without one are available to anyone signed in: the dashboard adapts to what
+ * you can see, and settings are your own.
+ */
+const NAV: { href: string; label: string; icon: typeof Users; permission?: Permission }[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/staff", label: "Staff", icon: Users },
-  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck },
-  { href: "/dashboard/leave", label: "Leave", icon: ClipboardList },
-  { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/dashboard/meetings", label: "Meetings", icon: CalendarDays },
-  { href: "/dashboard/projects", label: "Projects", icon: FolderKanban },
-  { href: "/dashboard/payroll", label: "Payroll", icon: DollarSign },
-  { href: "/dashboard/expenses", label: "Expenses", icon: Receipt },
-  { href: "/dashboard/recruitment", label: "Recruitment", icon: BriefcaseBusiness },
-  { href: "/dashboard/operations", label: "Operations", icon: Wrench },
+  { href: "/dashboard/staff", label: "Staff", icon: Users, permission: "staff.view" },
+  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance.view" },
+  { href: "/dashboard/leave", label: "Leave", icon: ClipboardList, permission: "leave.view" },
+  { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, permission: "tasks.view" },
+  { href: "/dashboard/meetings", label: "Meetings", icon: CalendarDays, permission: "meetings.view" },
+  { href: "/dashboard/projects", label: "Projects", icon: FolderKanban, permission: "projects.view" },
+  { href: "/dashboard/payroll", label: "Payroll", icon: DollarSign, permission: "payroll.view" },
+  { href: "/dashboard/expenses", label: "Expenses", icon: Receipt, permission: "expenses.view" },
+  { href: "/dashboard/recruitment", label: "Recruitment", icon: BriefcaseBusiness, permission: "recruitment.view" },
+  { href: "/dashboard/operations", label: "Operations", icon: Wrench, permission: "assets.view" },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
-] as const
+]
 
 /**
  * Overview matches only its exact path; every other entry also matches its
@@ -43,6 +50,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
   const pathname = usePathname() ?? ""
+  const { can, isLoading: permissionsLoading } = usePermissions()
+  // Until permissions arrive only the ungated entries show, so a link never
+  // appears and then disappears under the cursor.
+  const visible = NAV.filter((entry) => !entry.permission || can(entry.permission))
   const current = NAV.find((entry) => isActive(pathname, entry.href))
 
   return (
@@ -53,8 +64,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <Button variant="ghost" size="icon-sm" className="md:hidden" aria-label="Close navigation" onPress={() => setOpen(false)}><X /></Button>
         </div>
 
-        <nav className="mt-8 grid gap-1">
-          {NAV.map(({ href, label, icon: Icon }) => {
+        <nav className="mt-8 grid gap-1" aria-busy={permissionsLoading}>
+          {visible.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href)
             return (
               <Link
