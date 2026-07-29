@@ -1,12 +1,14 @@
 "use client"
 
-import { ArrowDown, ArrowUp, CheckSquare, Search } from "lucide-react"
+import { ArrowDown, ArrowUp, CheckSquare, Plus, Search } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { taskPriorityLabels, taskPriorityStyles, taskStatusLabels, taskStatusOrder } from "@/features/projects/labels"
 import { useTasks } from "@/hooks/use-task-detail"
 import { useWorkspaceUsers } from "@/hooks/use-projects"
+import { usePermissions } from "@/hooks/use-permissions"
+import { TaskFormDialog } from "@/features/projects/task-form-dialog"
 import type { TaskPriority, TaskStatus } from "@/types/project"
 import type { TaskFilters, TaskListItem, TaskSort } from "@/types/task"
 
@@ -30,6 +32,9 @@ export function TasksModule() {
   const [sort, setSort] = useState<TaskSort>("due_date")
   const [direction, setDirection] = useState<"asc" | "desc">("asc")
   const [page, setPage] = useState(1)
+  const [creating, setCreating] = useState(false)
+
+  const { can } = usePermissions()
 
   const { data: users } = useWorkspaceUsers()
   const activeView = QUICK_VIEWS.find((entry) => entry.id === view) ?? QUICK_VIEWS[0]!
@@ -62,10 +67,13 @@ export function TasksModule() {
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">Work</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Tasks</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Every task across your workspace.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">Work</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Tasks</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Every task across your workspace.</p>
+        </div>
+        {can("tasks.create") && <Button onPress={() => setCreating(true)}><Plus />New task</Button>}
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Quick views">
@@ -183,6 +191,8 @@ export function TasksModule() {
           </div>
         </div>
       )}
+
+      {creating && <TaskFormDialog defaultStatus="pending" onClose={() => setCreating(false)} />}
     </div>
   )
 }

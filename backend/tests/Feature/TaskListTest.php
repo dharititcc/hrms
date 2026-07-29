@@ -193,4 +193,51 @@ class TaskListTest extends TestCase
 
         $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(0, 'data');
     }
+
+    public function test_a_task_can_be_created_without_a_project(): void
+    {
+        $owner = User::factory()->create();
+        $mate = $this->teammate($owner);
+        Sanctum::actingAs($owner);
+
+        // The list could show work but not add any: tasks were creatable only
+        // from inside a project.
+        $this->postJson('/api/auth/tasks', [
+            'subject' => 'Renew the domain',
+            'status' => 'pending',
+            'priority' => 'high',
+            'assignee_ids' => [$mate->id],
+        ])->assertCreated()
+            ->assertJsonPath('data.subject', 'Renew the domain')
+            ->assertJsonPath('data.related', null);
+
+        $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_a_standalone_task_still_validates(): void
+    {
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $this->postJson('/api/auth/tasks', ['subject' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['subject', 'status', 'priority']);
+    }
+
+    public function test_a_client_cannot_create_a_task(): void
+    {
+        $owner = User::factory()->create();
+        $employee = Employee::create([
+            'owner_id' => $owner->id, 'name' => 'Ada', 'email' => 'client@example.com',
+            'role' => 'client', 'status' => 'active',
+        ]);
+        app(EmployeeInvitationService::class)->invite($employee);
+
+        Sanctum::actingAs($employee->refresh()->user);
+
+        // A client may read and comment on the work they are part of, nothing more.
+        $this->postJson('/api/auth/tasks', [
+            'subject' => 'Not mine to make', 'status' => 'pending', 'priority' => 'medium',
+        ])->assertForbidden();
+    }
 }

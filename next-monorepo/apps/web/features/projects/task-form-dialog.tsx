@@ -10,6 +10,7 @@ import { SelectField } from "@/components/ui/select-field"
 import { taskPriorityLabels, taskStatusLabels, taskStatusOrder } from "@/features/projects/labels"
 import { taskSchema, type TaskFormValues } from "@/features/projects/schemas"
 import { useProjectTaskMutations, useWorkspaceUsers } from "@/hooks/use-projects"
+import { useTaskMutations } from "@/hooks/use-task-detail"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { ProjectTask, TaskPriority, TaskStatus } from "@/types/project"
@@ -27,13 +28,19 @@ const emptyValues = (task: ProjectTask | null | undefined, defaultStatus: TaskSt
 })
 
 export function TaskFormDialog({ projectId, task, defaultStatus, onClose }: {
-  projectId: number
+  /** Omitted for a task that belongs to no project. */
+  projectId?: number | null
   task?: ProjectTask | null
   defaultStatus: TaskStatus
   onClose: () => void
 }) {
   const { toast } = useToast()
-  const { create, update } = useProjectTaskMutations(projectId)
+  // Both are built either way: a hook cannot be called conditionally, and
+  // neither fetches anything until its mutation runs.
+  const projectMutations = useProjectTaskMutations(projectId ?? 0)
+  const standalone = useTaskMutations()
+  const create = projectId ? projectMutations.create : standalone.create
+  const update = projectMutations.update
   const { data: users } = useWorkspaceUsers()
   const editing = Boolean(task)
   const assignable = users ?? []

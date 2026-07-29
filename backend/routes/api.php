@@ -203,6 +203,8 @@ Route::prefix('auth')->group(function () {
         Route::patch('/meetings/{meeting}/attendance', [MeetingController::class, 'attendance']);
 
         Route::get('/tasks', [TaskController::class, 'index']);
+        // A task with no project behind it, added straight from the task list.
+        Route::post('/tasks', [TaskController::class, 'store']);
         Route::get('/tasks/{task}', [TaskController::class, 'show']);
         Route::put('/tasks/{task}', [TaskController::class, 'update']);
         Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);

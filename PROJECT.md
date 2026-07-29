@@ -1,177 +1,175 @@
 # HRMS
 
-A human resources system: employees, attendance, leave, payroll, and the
-project and meeting work that surrounds them.
+A human resources system: employees, attendance, leave and payroll, together
+with the project and meeting work that surrounds them.
 
 Two applications in one repository.
 
 | | |
 |---|---|
-| `backend/` | Laravel 13 API, PHP 8.3, MySQL. Sanctum tokens. |
-| `next-monorepo/` | Next.js 16 App Router, React 19, TanStack Query, Tailwind, React Aria Components. |
+| `backend/` | Laravel API, PHP 8.3, MySQL. Token authentication. |
+| `next-monorepo/` | Next.js App Router, React, TanStack Query, Tailwind, React Aria Components. |
 
-Everything the interface does goes through the API. There are no Blade
-screens; the one Blade view renders a payslip PDF.
+Everything the interface does goes through the API. There are no server-rendered
+screens; the one exception renders a payslip to PDF.
 
 ---
 
 ## Ideas the whole system rests on
 
-Read these first. Most of the code makes sense only in their light.
+Read these first. Most of the rest makes sense only in their light.
 
-### A workspace is a user
+### A workspace belongs to one person
 
-Every record carries an `owner_id` pointing at the `users` row that owns the
-workspace. There is no separate tenants table. A person invited into somebody
-else's workspace gets their own `users` row linked to an `employees` record,
-and `User::workspaceOwnerId()` resolves to the owner either way. Every query
-is scoped by it.
+Every record belongs to a workspace, and a workspace is owned by the account
+that created it. Somebody invited into another person's workspace gets their
+own login, linked to their employee record, and the system resolves either kind
+of account to the same workspace. Nothing is ever visible across workspaces.
 
-### Permissions are resource-scoped and live in code
+### Permissions are per module, and fixed by the product
 
-A permission is always `module.action` — `payroll.view`, `tasks.create`. The
-matrix lives in `app/Support/PermissionRegistry.php`, not the database,
-because the set is fixed by the product and a role that can be edited at
-runtime can be misconfigured into locking everybody out.
+A permission is always a module and an action together — seeing payroll,
+creating a task. The set of them is defined in the application rather than
+edited at runtime, so a role cannot be misconfigured into locking everybody
+out. An administrator of one workspace still cannot reach another's records:
+there is no blanket override anywhere.
 
-Every combination is registered as a Laravel gate, so routes read
-`->middleware('can:payroll.approve')`. There is deliberately **no
-`Gate::before` bypass for admins**: an admin of one workspace must not reach
-another's records, and a blanket bypass would have granted exactly that.
+Two levels of visibility matter. On the personal areas — attendance, leave,
+payroll, expenses — one permission means *your own* records and a separate one
+means *everybody's*. That distinction is enforced when the data is fetched, not
+merely hidden in the interface, so an employee reads their own payslip without
+being able to reach the payroll.
 
-`view` and `view-all` are different things. On the personal modules —
-attendance, leave, payroll, expenses — `view` means your own records and
-`view-all` means everybody's. `App\Support\RecordScope` enforces the split in
-the query, so an employee reads their own payslip without seeing the payroll.
+Roles set the starting point. Any individual can then be granted or denied
+anything, and only the differences from their role are remembered — so somebody
+left alone keeps following their role even if the role's meaning later changes.
+Nobody can hand out access they do not hold themselves.
 
-### Figures are frozen when they are committed
+### Committed figures are frozen
 
-Payslip lines, worked hours and salary assignments are all written once and
-kept, never recomputed on read. Correcting a salary structure next month must
-not silently rewrite a payslip already issued, and changing a shift must not
-restate hours somebody has been paid for. Where a figure can legitimately be
-restated — a corrected attendance record — the rules it was judged under are
-stored on the row so the restatement uses them rather than today's.
+Payslips, worked hours and salary history are written once and kept. Correcting
+a salary structure next month must not quietly rewrite a payslip already
+issued, and changing office hours must not restate hours somebody has been paid
+for. Where a figure can legitimately be restated — a corrected attendance
+record — the rules it was originally judged under are kept with it, so the
+restatement uses those rather than today's.
 
-### Times are instants plus a wall clock
+### Times carry their place
 
-Attendance stores three things: the wall clock where the employee was, the
-absolute instant it maps to, and the IANA zone they were in. The wall clock is
-what a shift start of 09:00 is compared against; the instant is what lets a
-manager elsewhere read the day in their own zone. `APP_TIMEZONE` sets the
-server's own clock and should match where the people using it work.
+Attendance records the clock the employee saw, the exact moment it corresponds
+to, and where in the world they were. The clock reading is what a shift
+starting at nine is compared against; the moment is what lets a manager
+elsewhere read the same day in their own time.
 
 ---
 
-## Modules
+## The modules
 
 ### Employees
 
-The directory. Table is `staff` and its foreign keys are `staff_id` — the
-model, API and interface all say Employee, and only the schema still says
-staff, because renaming those columns would touch every table for no
-behavioural gain.
+The directory of people. Somebody can be invited, which creates them a login
+and sends a link to choose a password — **no password is ever sent by email**.
 
-An employee may be invited, which creates a `users` row and emails a
-set-password link. **No password is ever emailed**; the invitation carries a
-link to set one.
-
-An employee can be assigned an office, which is preferred when deciding which
-office a geofenced check-in happened at.
+Each person can be given a role, a home office, and individual access as
+described above.
 
 ### Attendance
 
-Check in and out, with device, coordinates and timezone captured.
+People check in and out. Each record captures the device, the location if
+allowed, and the time zone.
 
-- **Shifts** (`work_shifts`) define office hours: start, end, grace, unpaid
-  break. Falls back to `config/attendance.php` when a workspace has none.
-- **Offices** (`attendance_locations`) are geofences with a haversine radius.
-  Outside every office is flagged for approval; with
-  `ATTENDANCE_ENFORCE_GEOFENCE=true` it is refused instead.
-- **Lateness** is measured from the shift start, not the end of the grace.
-  Grace forgives lateness; it does not move the start of the day.
-- **The unpaid break** is only deducted once somebody has been present long
-  enough for one to be due, and the result is held at that threshold until the
-  break is absorbed, so a longer day is never worth less than a shorter one.
-- **Corrections** restate everything derived from the times, mark the day as
-  entered by hand, and send it back for approval.
-- **Days never closed** are picked up nightly by `attendance:close-abandoned`,
-  closed at the end of their shift, and sent for approval.
+- **Office hours** define when the day starts and ends, how much lateness is
+  forgiven, and how long the unpaid break is. A workspace that has not set its
+  own is judged against a sensible default.
+- **Offices** are places with a radius around them. Checking in outside all of
+  them is flagged for somebody to approve, or refused outright if enforcement
+  is switched on.
+- **Lateness** is counted from when the day was due to start. Grace forgives
+  being late; it does not move the start.
+- **The unpaid break** only comes off once somebody has been there long enough
+  to have taken one, and never in a way that makes a longer day worth less than
+  a shorter one.
+- **A day can be corrected**, which recalculates the hours, marks it as entered
+  by hand, and sends it back for approval.
+- **A day nobody closed** is picked up overnight, closed at the end of its
+  shift, and sent for approval rather than being left at nothing.
 
 ### Leave
 
-Types with an annual entitlement, and requests against them. Approving is a
-separate permission from editing. Balances on the dashboard count approved
-requests only, and measure calendar days inclusive of both ends — which
-overstates a booking spanning a weekend, and says so.
+Leave types carry an annual entitlement; people request against them and
+somebody approves. Approving is deliberately a separate permission from
+editing. Balances count approved leave only, and measure whole days from start
+to end — which overstates a booking spanning a weekend, and says so where it is
+shown.
 
 ### Payroll
 
-The largest module, and the one where being wrong costs the most.
+The largest area, and the one where being wrong costs the most.
 
-```
-salary structures ──> components (earning / deduction / employer contribution)
-        │
-        └─> employee salary assignment (basic + per-employee overrides)
-                    │
-                    └─> payroll run ──> salary slips ──> frozen slip lines
-                                             │
-                                             └─> payments
-```
+The shape of it:
 
-- **Structures and components** describe how a payslip is built. A component
-  is fixed, a percentage of basic, a percentage of gross, or entered per
-  payslip. An earning may not be a percentage of gross — gross includes
-  earnings, so the value would depend on itself — and this is refused at save
-  time rather than at generation.
-- **Assignments** hold an employee's basic salary. A revision never edits the
-  current row: it closes it the day before the new one starts, so a payslip
-  can always be explained by the assignment in force when it was generated.
-- **Runs** produce a draft slip per active employee with a salary in that
-  country, calculated from the assignment in force at the period end.
-- **Progressive taxes are `manual`**, not a flat rate. They generate as zero
-  until somebody fills them in, and the interface counts and flags the unset
-  ones, because approving as-is would under-deduct.
-- **Workflow** is draft → pending approval → approved → paid. Approval is the
-  point of no return: figures commit, and the run can no longer be
-  recalculated or deleted. Payment is recorded per payslip, can be partial,
-  and is refused before approval.
-- **Payslips** render to PDF and can be emailed. Whether the PDF is attached
-  is a config decision (`config/payslip.php`): attaching is expected, but it
-  puts salary figures in an inbox.
-- **Bank and tax details** are encrypted at rest, returned only as their last
-  four digits, and their changes are logged with the values withheld —
-  changing bank details is the classic payroll diversion attack.
+> A **salary structure** describes how a payslip is built, as a set of
+> **components** — allowances, deductions, employer contributions. Each
+> employee gets a **salary**, which is a basic figure against a structure, plus
+> any amounts particular to them. A **payroll run** covers a period and turns
+> each person's salary into a **payslip**, which records its own breakdown and
+> never changes afterwards. **Payments** are then recorded against payslips.
 
-> `config/payroll.php` carries statutory rates for seven countries. **They are
-> starting defaults, not verified law.** Check every one against current
-> legislation before anybody is paid.
+Things worth knowing:
+
+- A component can be a fixed amount, a proportion of basic pay, a proportion of
+  the total, or a figure entered each time. An allowance cannot be a proportion
+  of the total, because the total includes allowances and the answer would
+  depend on itself. That is refused when the component is saved, not when
+  payroll is run.
+- **A pay rise never edits the existing record.** The current salary is closed
+  the day before the new one begins, so any payslip can still be explained by
+  what was in force when it was produced.
+- **Income tax is entered rather than calculated.** Progressive rates cannot be
+  reduced to a single percentage without being wrong, so those lines start at
+  nothing and the interface counts and flags the ones still unset — approving
+  as-is would under-deduct.
+- **Approval is the point of no return.** Before it, a run can be recalculated
+  or thrown away; after it, neither. Payment is recorded per payslip, can be
+  partial, and is refused before approval.
+- **Payslips can be produced as PDFs and emailed.** Whether the file travels
+  with the email is a setting: attaching it is what people expect, but it does
+  put pay details in an inbox.
+- **Bank details are encrypted, shown only as their last few digits, and any
+  change to them is recorded** — with the numbers themselves left out of the
+  record. Changing where someone's pay goes is a well-known fraud, and the
+  trail is the defence.
+
+> The statutory rates that ship for each country are **starting points, not
+> verified law**. Check every one against current legislation before anybody is
+> paid.
 
 ### Tasks and projects
 
-Projects with members, and tasks that may hang off a project or stand alone.
-Tasks carry comments with @mentions, checklists, time entries with a running
-timer, attachments, and recurrence. Assignees, followers and a public flag
-decide who can see one.
+Projects have members. Tasks can belong to a project or stand alone, and carry
+comments with mentions, checklists, time tracking with a running timer,
+attachments and recurrence. Who can see a task depends on whether it is public
+and whether they are assigned to or following it.
 
 ### Meetings
 
-Scheduling with participants, external guests, RSVP, reschedule, cancel and
-recurrence. Guests have no account, so an unguessable token is their only
-credential and the public RSVP endpoints are throttled. Meeting links are
-behind a provider interface so Google Meet can be added without touching the
-scheduling code.
+Scheduling with participants, external guests, replies, rescheduling,
+cancellation and recurrence. Guests have no account, so their invitation link
+is their only credential and those pages are rate limited. Meeting links sit
+behind a seam so a provider such as Google Meet can be added without disturbing
+the scheduling.
 
 ### Notifications
 
-Eight notification classes on the mail and database channels, surfaced by a
-bell in the header. Reminders and recurrence run on the scheduler.
+Assignments, mentions, reminders, invitations and payslips reach people by
+email and in the application, through a bell in the header. Reminders and
+recurrence run on a schedule.
 
 ### Everything else
 
 Expenses, recruitment, performance, assets, announcements and reports exist in
-a thinner form: workspace-scoped, permission-gated, without the depth of the
-modules above.
+a lighter form — scoped and permission-gated like the rest, without the depth
+of the areas above.
 
 ---
 
@@ -185,20 +183,21 @@ cd backend && composer install && php artisan migrate --seed && php artisan serv
 cd next-monorepo && npm install && npm run dev
 ```
 
-The scheduler must run for recurrence, reminders and abandoned check-outs:
-`php artisan schedule:work` locally, or `schedule:run` from cron every minute.
+Set the application's time zone to wherever the people using it work; it
+decides which day a check-in falls on.
 
-Tests are `php artisan test` in `backend/`. The frontend has no test harness;
-it is checked with `npx tsc --noEmit`, `npm run lint` and `npm run build`.
+A scheduler must be running for recurrence, reminders and unclosed attendance:
+`php artisan schedule:work` while developing, or a minutely cron entry in
+deployment.
+
+Tests are `php artisan test` in `backend/`. The interface has no test harness
+and is checked with `npx tsc --noEmit`, `npm run lint` and `npm run build`.
 
 ## Conventions
 
-- Repository and service layers behind controllers; form requests validate;
-  API resources shape every response.
-- Enums for anything with fixed values, never loose strings.
-- Polymorphic aliases live in `App\Support\WorkspaceRecords`, and the morph map
-  is enforced, so an unmapped model throws rather than leaking a class name.
-- On the frontend, react-aria's `TextField` does not read react-hook-form's
-  `defaultValues`. Every form that prefills must call `reset()` in an effect,
-  with the defaults built by a module-level function so the dependency is
-  stable.
+- Controllers stay thin: validation in form requests, work in services, shape
+  in resources.
+- Anything with a fixed set of values is an enum, never a loose string.
+- On the interface side, the form library and the component library disagree
+  about initial values: every form that prefills has to push its values in
+  after mounting, or the fields open empty.

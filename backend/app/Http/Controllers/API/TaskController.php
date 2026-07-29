@@ -36,6 +36,22 @@ class TaskController extends Controller
         return TaskResource::collection($this->service->listForRelated($project))->response();
     }
 
+    /**
+     * A task that belongs to nobody in particular.
+     *
+     * Tasks could only be created inside a project, which left the standalone
+     * list able to show work but not to add any. Passing no related record is
+     * already what the service expects for one.
+     */
+    public function store(StoreTaskRequest $request): JsonResponse
+    {
+        $this->authorize('create', Task::class);
+
+        $task = $this->service->create($request->user(), $request->validated());
+
+        return (new TaskResource($task))->response()->setStatusCode(201);
+    }
+
     public function storeForProject(StoreTaskRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);

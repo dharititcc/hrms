@@ -2,7 +2,21 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { taskService } from "@/services/task-service"
+import type { ProjectTaskInput } from "@/types/project"
 import type { ManualTimeInput, TaskChecklistItem, TaskFilters } from "@/types/task"
+
+export function useTaskMutations() {
+  const queryClient = useQueryClient()
+  // A standalone task shows up in the list and in the dashboard counts.
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["tasks"] })
+    queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] })
+  }
+
+  const create = useMutation({ mutationFn: (input: ProjectTaskInput) => taskService.create(input), onSuccess: refresh })
+
+  return { create }
+}
 
 export function useTasks(filters: TaskFilters) {
   return useQuery({ queryKey: ["tasks", filters], queryFn: () => taskService.list(filters), placeholderData: (previous) => previous })

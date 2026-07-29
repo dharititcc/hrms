@@ -105,7 +105,7 @@ export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee 
       role="presentation"
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-background p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="employee-dialog-title">
+      <div className={`max-h-[90vh] w-full overflow-y-auto rounded-2xl border bg-background p-6 shadow-2xl ${canGrant ? "max-w-2xl" : "max-w-lg"}`} role="dialog" aria-modal="true" aria-labelledby="employee-dialog-title">
         <div className="flex items-start justify-between">
           <div>
             <h2 id="employee-dialog-title" className="text-lg font-semibold">{editing ? "Edit employee" : "Add employee"}</h2>

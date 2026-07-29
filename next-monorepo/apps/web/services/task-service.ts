@@ -1,8 +1,13 @@
 import { apiClient } from "@/lib/api-client"
-import type { ProjectTask } from "@/types/project"
+import type { ProjectTask, ProjectTaskInput } from "@/types/project"
 import type { ManualTimeInput, TaskChecklistItem, TaskComment, TaskFilters, TaskListResponse, TaskTimeEntry, TaskTimeEntryList } from "@/types/task"
 
 export const taskService = {
+  /** A task with no project behind it, added from the task list. */
+  async create(input: ProjectTaskInput) {
+    const { data } = await apiClient.post<{ data: ProjectTask }>("/auth/tasks", input)
+    return data.data
+  },
   async list(filters: TaskFilters = {}) {
     const { data } = await apiClient.get<TaskListResponse>("/auth/tasks", {
       params: {
