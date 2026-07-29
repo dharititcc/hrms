@@ -12,6 +12,7 @@ use App\Http\Controllers\API\PhaseFourController;
 use App\Http\Controllers\API\PhaseFiveController;
 use App\Http\Controllers\API\ActivityLogController;
 use App\Http\Controllers\API\AttachmentController;
+use App\Http\Controllers\API\AttendanceLocationController;
 use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
@@ -73,6 +74,11 @@ Route::prefix('auth')->group(function () {
         Route::post('/attendance/check-in', [AttendanceController::class, 'checkIn'])->middleware('can:attendance.create');
         Route::post('/attendance/{attendance}/check-out', [AttendanceController::class, 'checkOut'])->middleware('can:attendance.create');
         Route::patch('/attendance/{attendance}/approve', [AttendanceController::class, 'approve'])->middleware('can:attendance.edit');
+
+        Route::get('/attendance-locations', [AttendanceLocationController::class, 'index'])->middleware('can:attendance.view');
+        Route::post('/attendance-locations', [AttendanceLocationController::class, 'store'])->middleware('can:attendance.edit');
+        Route::put('/attendance-locations/{location}', [AttendanceLocationController::class, 'update'])->middleware('can:attendance.edit');
+        Route::delete('/attendance-locations/{location}', [AttendanceLocationController::class, 'destroy'])->middleware('can:attendance.edit');
         Route::get('/leave/types', [LeaveController::class, 'types'])->middleware('can:leave.view');
         Route::get('/leave/requests', [LeaveController::class, 'index'])->middleware('can:leave.view');
         Route::post('/leave/requests', [LeaveController::class, 'store'])->middleware('can:leave.create');

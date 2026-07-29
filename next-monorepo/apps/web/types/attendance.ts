@@ -35,6 +35,35 @@ export type CapturedPosition = {
   longitude: number
 }
 
+export type AttendanceLocation = {
+  id: number
+  name: string
+  address: string | null
+  latitude: number
+  longitude: number
+  radius_metres: number
+  is_active: boolean
+  created_at: string
+}
+
+export type AttendanceLocationListResponse = {
+  data: AttendanceLocation[]
+  meta: {
+    /** Whether a fence blocks a check-in or merely flags it for approval. */
+    enforcement_enabled: boolean
+    default_radius_metres: number
+  }
+}
+
+export type AttendanceLocationInput = {
+  name: string
+  address?: string | null
+  latitude: number
+  longitude: number
+  radius_metres: number
+  is_active?: boolean
+}
+
 export type CheckInInput = {
   staff_id: number
   work_mode?: WorkMode

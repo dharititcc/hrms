@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { attendanceService } from "@/services/attendance-service"
-import type { CapturedPosition, CheckInInput } from "@/types/attendance"
+import type { AttendanceLocationInput, CapturedPosition, CheckInInput } from "@/types/attendance"
 
 export function useAttendance(filters: { month?: string; staff_id?: number }) {
   return useQuery({
@@ -14,6 +14,24 @@ export function useAttendance(filters: { month?: string; staff_id?: number }) {
 
 export function useTodayAttendance() {
   return useQuery({ queryKey: ["attendance-today"], queryFn: () => attendanceService.today() })
+}
+
+export function useAttendanceLocations() {
+  return useQuery({ queryKey: ["attendance-locations"], queryFn: () => attendanceService.locations() })
+}
+
+export function useAttendanceLocationMutations() {
+  const queryClient = useQueryClient()
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["attendance-locations"] })
+
+  const create = useMutation({ mutationFn: (input: AttendanceLocationInput) => attendanceService.createLocation(input), onSuccess: refresh })
+  const update = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: AttendanceLocationInput }) => attendanceService.updateLocation(id, input),
+    onSuccess: refresh,
+  })
+  const remove = useMutation({ mutationFn: (id: number) => attendanceService.removeLocation(id), onSuccess: refresh })
+
+  return { create, update, remove }
 }
 
 export function useAttendanceMutations() {

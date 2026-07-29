@@ -1,5 +1,8 @@
 import { apiClient } from "@/lib/api-client"
-import type { AttendanceListResponse, AttendanceRecord, CapturedPosition, CheckInInput } from "@/types/attendance"
+import type {
+  AttendanceListResponse, AttendanceLocation, AttendanceLocationInput,
+  AttendanceLocationListResponse, AttendanceRecord, CapturedPosition, CheckInInput,
+} from "@/types/attendance"
 
 export const attendanceService = {
   async list(filters: { month?: string; staff_id?: number } = {}) {
@@ -22,6 +25,23 @@ export const attendanceService = {
   async approve(id: number) {
     const { data } = await apiClient.patch<{ data: AttendanceRecord }>(`/auth/attendance/${id}/approve`)
     return data.data
+  },
+
+  // Office locations, which geofenced check-ins are measured against.
+  async locations() {
+    const { data } = await apiClient.get<AttendanceLocationListResponse>("/auth/attendance-locations")
+    return data
+  },
+  async createLocation(input: AttendanceLocationInput) {
+    const { data } = await apiClient.post<{ data: AttendanceLocation }>("/auth/attendance-locations", input)
+    return data.data
+  },
+  async updateLocation(id: number, input: AttendanceLocationInput) {
+    const { data } = await apiClient.put<{ data: AttendanceLocation }>(`/auth/attendance-locations/${id}`, input)
+    return data.data
+  },
+  async removeLocation(id: number) {
+    await apiClient.delete(`/auth/attendance-locations/${id}`)
   },
 }
 

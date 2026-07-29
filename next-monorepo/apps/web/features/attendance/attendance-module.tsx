@@ -5,6 +5,7 @@ import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { CheckInCard } from "@/features/attendance/check-in-card"
 import { attendanceStatusLabels, attendanceStatusStyles, formatMinutes, workModeLabels } from "@/features/attendance/labels"
+import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useStaff } from "@/hooks/use-staff"
@@ -57,6 +58,8 @@ export function AttendanceModule() {
       </div>
 
       <CheckInCard staffId={myStaffId} />
+
+      <OfficeLocations />
 
       <div className="flex flex-wrap items-end gap-3 rounded-2xl border bg-background p-3">
         <label className="grid gap-1 text-xs font-medium">
