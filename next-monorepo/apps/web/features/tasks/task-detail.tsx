@@ -31,14 +31,14 @@ export function TaskDetail({ taskId }: { taskId: number }) {
         <p className="mt-1 text-sm text-muted-foreground">It may have been deleted, or you may not have access.</p>
         <div className="mt-4 flex gap-2">
           <Button variant="outline" onPress={() => refetch()}>Retry</Button>
-          <Link href="/dashboard/projects"><Button variant="ghost">Back to projects</Button></Link>
+          <Link href="/projects"><Button variant="ghost">Back to projects</Button></Link>
         </div>
       </div>
     )
   }
 
   const assignees = task.assignees ?? []
-  const backHref = task.related_type === "project" && task.related_id ? `/dashboard/projects/${task.related_id}` : "/dashboard/projects"
+  const backHref = task.related_type === "project" && task.related_id ? `/projects/${task.related_id}` : "/projects"
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6">

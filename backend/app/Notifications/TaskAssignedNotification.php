@@ -35,7 +35,7 @@ class TaskAssignedNotification extends Notification implements ShouldQueue
             $message->line("Due {$this->task->due_date->toFormattedDateString()}.");
         }
 
-        return $message->action('View the task', config('app.frontend_url')."/dashboard/tasks/{$this->task->id}");
+        return $message->action('View the task', config('app.frontend_url')."/tasks/{$this->task->id}");
     }
 
     /** @return array<string, mixed> */

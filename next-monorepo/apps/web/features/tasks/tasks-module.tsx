@@ -216,7 +216,7 @@ function TaskRow({ task }: { task: TaskListItem }) {
   return (
     <tr className="transition-colors hover:bg-muted/20">
       <td className="px-5 py-4">
-        <Link href={`/dashboard/tasks/${task.id}`} className="font-medium hover:underline">{task.subject}</Link>
+        <Link href={`/tasks/${task.id}`} className="font-medium hover:underline">{task.subject}</Link>
         {task.is_billable && <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground">Billable</span>}
       </td>
       <td className="px-5 py-4 text-muted-foreground">{taskStatusLabels[task.status]}</td>
@@ -227,7 +227,7 @@ function TaskRow({ task }: { task: TaskListItem }) {
       <td className={`px-5 py-4 ${overdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>{task.due_date ?? "—"}</td>
       <td className="px-5 py-4 text-xs text-muted-foreground">
         {task.related_type === "project" && task.related_id
-          ? <Link href={`/dashboard/projects/${task.related_id}`} className="hover:underline">{task.related_label ?? "Project"}</Link>
+          ? <Link href={`/projects/${task.related_id}`} className="hover:underline">{task.related_label ?? "Project"}</Link>
           : task.related_label ?? "—"}
       </td>
     </tr>

@@ -129,7 +129,7 @@ function TaskCard({ task, onMove, onEdit, onDelete }: { task: ProjectTask; onMov
       className={`grid gap-2 rounded-xl border bg-background p-3 shadow-sm transition-shadow hover:shadow-md ${movable ? "cursor-grab active:cursor-grabbing" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <Link href={`/dashboard/tasks/${task.id}`} className="text-sm font-medium hover:underline">{task.subject}</Link>
+        <Link href={`/tasks/${task.id}`} className="text-sm font-medium hover:underline">{task.subject}</Link>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${taskPriorityStyles[task.priority]}`}>{taskPriorityLabels[task.priority]}</span>
       </div>
 

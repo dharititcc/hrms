@@ -89,7 +89,7 @@ function MonthView({ anchor, byDay, onMove, draggable }: { anchor: Date; byDay: 
 function MonthChip({ meeting, draggable }: { meeting: Meeting; draggable: boolean }) {
   return (
     <Link
-      href={`/dashboard/meetings/${meeting.id}`}
+      href={`/meetings/${meeting.id}`}
       draggable={draggable}
       onDragStart={draggable ? (event) => event.dataTransfer.setData("text/plain", String(meeting.id)) : undefined}
       className={`block truncate rounded px-1.5 py-0.5 text-[0.7rem] ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${meetingStatusStyles[meeting.status]}`}
@@ -175,7 +175,7 @@ function AgendaView({ meetings }: { meetings: Meeting[] }) {
 
 function MeetingCard({ meeting, expanded }: { meeting: Meeting; expanded?: boolean }) {
   return (
-    <Link href={`/dashboard/meetings/${meeting.id}`} className="block rounded-xl border p-2.5 transition-colors hover:bg-muted/40">
+    <Link href={`/meetings/${meeting.id}`} className="block rounded-xl border p-2.5 transition-colors hover:bg-muted/40">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium">{meeting.title}</p>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[0.7rem] font-medium ${meetingStatusStyles[meeting.status]}`}>

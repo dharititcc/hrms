@@ -29,6 +29,7 @@ use App\Http\Controllers\API\TaskChecklistController;
 use App\Http\Controllers\API\TaskCommentController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TaskTimeEntryController;
+use App\Http\Controllers\API\WorkShiftController;
 use App\Http\Controllers\API\WorkspaceUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,11 @@ Route::prefix('auth')->group(function () {
         Route::patch('/attendance/{attendance}/approve', [AttendanceController::class, 'approve'])->middleware('can:attendance.edit');
         // Correcting somebody's hours, including closing a forgotten check-out.
         Route::patch('/attendance/{attendance}', [AttendanceController::class, 'correct'])->middleware('can:attendance.edit');
+
+        Route::get('/work-shifts', [WorkShiftController::class, 'index'])->middleware('can:attendance.view');
+        Route::post('/work-shifts', [WorkShiftController::class, 'store'])->middleware('can:attendance.edit');
+        Route::put('/work-shifts/{shift}', [WorkShiftController::class, 'update'])->middleware('can:attendance.edit');
+        Route::delete('/work-shifts/{shift}', [WorkShiftController::class, 'destroy'])->middleware('can:attendance.edit');
 
         Route::get('/attendance-locations', [AttendanceLocationController::class, 'index'])->middleware('can:attendance.view');
         Route::post('/attendance-locations', [AttendanceLocationController::class, 'store'])->middleware('can:attendance.edit');

@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client"
 import type {
   AttendanceCorrectionInput, AttendanceListResponse, AttendanceLocation, AttendanceLocationInput,
   AttendanceLocationListResponse, AttendanceRecord, CapturedPosition, CheckInInput,
+  WorkShift, WorkShiftInput, WorkShiftListResponse,
 } from "@/types/attendance"
 
 export const attendanceService = {
@@ -45,6 +46,23 @@ export const attendanceService = {
   async approve(id: number) {
     const { data } = await apiClient.patch<{ data: AttendanceRecord }>(`/auth/attendance/${id}/approve`)
     return data.data
+  },
+
+  // Office hours, which lateness and a full day are measured against.
+  async shifts() {
+    const { data } = await apiClient.get<WorkShiftListResponse>("/auth/work-shifts")
+    return data
+  },
+  async createShift(input: WorkShiftInput) {
+    const { data } = await apiClient.post<{ data: WorkShift }>("/auth/work-shifts", input)
+    return data.data
+  },
+  async updateShift(id: number, input: WorkShiftInput) {
+    const { data } = await apiClient.put<{ data: WorkShift }>(`/auth/work-shifts/${id}`, input)
+    return data.data
+  },
+  async removeShift(id: number) {
+    await apiClient.delete(`/auth/work-shifts/${id}`)
   },
 
   // Office locations, which geofenced check-ins are measured against.

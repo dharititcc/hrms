@@ -50,7 +50,7 @@ class PayslipIssuedNotification extends Notification implements ShouldQueue
             $message->line('You can download it from your payroll page after signing in.');
         }
 
-        return $message->action('View your payslips', config('app.frontend_url').'/dashboard/payroll');
+        return $message->action('View your payslips', config('app.frontend_url').'/payroll');
     }
 
     /** @return array<string, mixed> */

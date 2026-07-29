@@ -6,6 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { CheckInCard } from "@/features/attendance/check-in-card"
 import { CorrectionDialog } from "@/features/attendance/correction-dialog"
 import { attendanceStatusLabels, attendanceStatusStyles, formatMinutes, workModeLabels } from "@/features/attendance/labels"
+import { OfficeHours } from "@/features/attendance/office-hours"
 import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -60,6 +61,8 @@ export function AttendanceModule() {
       </div>
 
       <CheckInCard employeeId={myEmployeeId} />
+
+      <OfficeHours />
 
       <OfficeLocations />
 
@@ -209,10 +212,17 @@ function Row({ record, showEmployee, onApprove, onCorrect }: {
         )}
       </td>
       <td className="px-5 py-4">
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${attendanceStatusStyles[record.status]}`}>
-          {attendanceStatusLabels[record.status]}
-        </span>
-        {record.late_minutes > 0 && <span className="ml-2 text-xs text-muted-foreground">{formatMinutes(record.late_minutes)}</span>}
+        <div className="grid gap-1">
+          <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-medium ${attendanceStatusStyles[record.status]}`}>
+            {attendanceStatusLabels[record.status]}
+          </span>
+          {/* A bare "4h 51m" beside the badge read as a second status. Saying
+              what the number is costs a line and removes the guesswork. */}
+          {record.late_minutes > 0 && (
+            <span className="text-xs text-muted-foreground">{formatMinutes(record.late_minutes)} late</span>
+          )}
+          {record.is_manual && <span className="text-xs text-muted-foreground">Entered by hand</span>}
+        </div>
       </td>
       <td className="px-5 py-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">

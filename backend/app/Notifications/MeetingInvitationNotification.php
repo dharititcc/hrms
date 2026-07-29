@@ -67,7 +67,7 @@ class MeetingInvitationNotification extends Notification implements ShouldQueue
     private function respondUrl(): string
     {
         return $this->guestToken === null
-            ? config('app.frontend_url')."/dashboard/meetings/{$this->meeting->id}"
+            ? config('app.frontend_url')."/meetings/{$this->meeting->id}"
             : config('app.frontend_url')."/meetings/invite/{$this->guestToken}";
     }
 }

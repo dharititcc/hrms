@@ -151,7 +151,7 @@ function ProjectRow({ project, onEdit, onDelete }: { project: Project; onEdit?: 
   return (
     <tr className="transition-colors hover:bg-muted/20">
       <td className="px-5 py-4">
-        <Link href={`/dashboard/projects/${project.id}`} className="font-medium hover:underline">{project.name}</Link>
+        <Link href={`/projects/${project.id}`} className="font-medium hover:underline">{project.name}</Link>
         <p className="mt-0.5 text-xs text-muted-foreground">{project.client || "No client"}</p>
       </td>
       <td className="px-5 py-4">

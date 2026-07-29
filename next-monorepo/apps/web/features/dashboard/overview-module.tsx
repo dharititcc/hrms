@@ -58,20 +58,20 @@ export function OverviewModule() {
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(isLoading || tasks) && (
             <>
-              <StatCard label="My open tasks" value={tasks?.mine} loading={isLoading} icon={<CheckSquare className="size-5" />} href="/dashboard/tasks" />
-              <StatCard label="Overdue" value={tasks?.overdue} loading={isLoading} icon={<AlertTriangle className="size-5" />} href="/dashboard/tasks" tone={tasks?.overdue ? "danger" : undefined} />
-              <StatCard label="Due today" value={tasks?.due_today} loading={isLoading} icon={<CalendarClock className="size-5" />} href="/dashboard/tasks" tone={tasks?.due_today ? "warning" : undefined} />
+              <StatCard label="My open tasks" value={tasks?.mine} loading={isLoading} icon={<CheckSquare className="size-5" />} href="/tasks" />
+              <StatCard label="Overdue" value={tasks?.overdue} loading={isLoading} icon={<AlertTriangle className="size-5" />} href="/tasks" tone={tasks?.overdue ? "danger" : undefined} />
+              <StatCard label="Due today" value={tasks?.due_today} loading={isLoading} icon={<CalendarClock className="size-5" />} href="/tasks" tone={tasks?.due_today ? "warning" : undefined} />
             </>
           )}
           {(isLoading || meetings) && (
-            <StatCard label="Awaiting my reply" value={meetings?.awaiting_my_reply} loading={isLoading} icon={<Inbox className="size-5" />} href="/dashboard/meetings" tone={meetings?.awaiting_my_reply ? "warning" : undefined} />
+            <StatCard label="Awaiting my reply" value={meetings?.awaiting_my_reply} loading={isLoading} icon={<Inbox className="size-5" />} href="/meetings" tone={meetings?.awaiting_my_reply ? "warning" : undefined} />
           )}
         </section>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {(isLoading || tasks) && (
-          <Panel title="Tasks" href="/dashboard/tasks" className="lg:col-span-2">
+          <Panel title="Tasks" href="/tasks" className="lg:col-span-2">
             <div className="grid gap-3 sm:grid-cols-3">
               <Metric label="Pending" value={tasks?.pending} loading={isLoading} />
               <Metric label="In progress" value={tasks?.in_progress} loading={isLoading} />
@@ -85,7 +85,7 @@ export function OverviewModule() {
         )}
 
         {(isLoading || meetings) && (
-          <Panel title="Meetings" href="/dashboard/meetings">
+          <Panel title="Meetings" href="/meetings">
             <div className="grid gap-3">
               <Metric label="Today" value={meetings?.today} loading={isLoading} />
               <Metric label="This week" value={meetings?.this_week} loading={isLoading} />
@@ -100,7 +100,7 @@ export function OverviewModule() {
           {/* Only for someone who can see the team; an employee's own day is
               already in the quick actions above. */}
           {attendance?.active_employees !== undefined && (
-            <Panel title="Today" href="/dashboard/attendance">
+            <Panel title="Today" href="/attendance">
               <div className="grid gap-3">
                 <Metric label="Present" value={attendance.present_today} loading={false} />
                 <Metric label="Late" value={attendance.late_today} loading={false} />
@@ -109,7 +109,7 @@ export function OverviewModule() {
               </div>
               {(attendance.awaiting_approval ?? 0) > 0 && (
                 <p className="mt-3 text-xs text-muted-foreground">
-                  <Link href="/dashboard/attendance" className="text-amber-600 hover:underline dark:text-amber-400">
+                  <Link href="/attendance" className="text-amber-600 hover:underline dark:text-amber-400">
                     {attendance.awaiting_approval} awaiting approval
                   </Link>
                   {" "}— flagged for being outside an office or entered by hand.
@@ -119,7 +119,7 @@ export function OverviewModule() {
           )}
 
           {leave && (
-            <Panel title="Leave" href="/dashboard/leave">
+            <Panel title="Leave" href="/leave">
               {leave.balances.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {leave.awaiting_approval === undefined
@@ -152,7 +152,7 @@ export function OverviewModule() {
                 {leave.my_pending > 0 && <p>{leave.my_pending} of your requests awaiting a decision.</p>}
                 {(leave.awaiting_approval ?? 0) > 0 && (
                   <p>
-                    <Link href="/dashboard/leave" className="text-amber-600 hover:underline dark:text-amber-400">
+                    <Link href="/leave" className="text-amber-600 hover:underline dark:text-amber-400">
                       {leave.awaiting_approval} request{leave.awaiting_approval === 1 ? "" : "s"} need your decision
                     </Link>
                   </p>
@@ -163,9 +163,9 @@ export function OverviewModule() {
           )}
 
           {payroll && (
-            <Panel title="Payroll" href="/dashboard/payroll">
+            <Panel title="Payroll" href="/payroll">
               {payroll.latest_slip ? (
-                <Link href="/dashboard/payroll" className="block rounded-lg bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50">
+                <Link href="/payroll" className="block rounded-lg bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50">
                   <p className="text-xs text-muted-foreground">Latest payslip{payroll.latest_slip.period ? ` · ${payroll.latest_slip.period}` : ""}</p>
                   <p className="mt-1 text-lg font-semibold tabular-nums">
                     {payroll.latest_slip.currency_symbol}{Number(payroll.latest_slip.net_salary).toLocaleString()}
@@ -192,7 +192,7 @@ export function OverviewModule() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {people && (
-          <Panel title="People" href="/dashboard/employees">
+          <Panel title="People" href="/employees">
             <div className="grid gap-3">
               <Metric label="Employee" value={people.employees} loading={false} />
               <Metric label="Active" value={people.active} loading={false} />
@@ -202,14 +202,14 @@ export function OverviewModule() {
             {people.employees > people.with_accounts && (
               <p className="mt-3 text-xs text-muted-foreground">
                 {people.employees - people.with_accounts} without an account cannot be assigned tasks.{" "}
-                <Link href="/dashboard/employees" className="text-primary hover:underline">Invite them</Link>.
+                <Link href="/employees" className="text-primary hover:underline">Invite them</Link>.
               </p>
             )}
           </Panel>
         )}
 
         {projects && (
-          <Panel title="Projects" href="/dashboard/projects">
+          <Panel title="Projects" href="/projects">
             <div className="grid gap-3">
               <Metric label="Active" value={projects.active} loading={false} />
               <Metric label="Total" value={projects.total} loading={false} />

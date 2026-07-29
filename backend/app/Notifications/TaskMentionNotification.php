@@ -34,7 +34,7 @@ class TaskMentionNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("{$this->author->name} mentioned you in a comment:")
             ->line($this->excerpt())
-            ->action('View the task', config('app.frontend_url')."/dashboard/tasks/{$this->task->id}");
+            ->action('View the task', config('app.frontend_url')."/tasks/{$this->task->id}");
     }
 
     /** @return array<string, mixed> */

@@ -40,7 +40,7 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
         <p className="mt-1 text-sm text-muted-foreground">It may have been deleted, or you may not have access.</p>
         <div className="mt-4 flex gap-2">
           <Button variant="outline" onPress={() => refetch()}>Retry</Button>
-          <Link href="/dashboard/meetings"><Button variant="ghost">Back to meetings</Button></Link>
+          <Link href="/meetings"><Button variant="ghost">Back to meetings</Button></Link>
         </div>
       </div>
     )
@@ -87,7 +87,7 @@ export function MeetingDetail({ meetingId }: { meetingId: number }) {
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
       <div>
-        <Link href="/dashboard/meetings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/meetings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />Meetings
         </Link>
         <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

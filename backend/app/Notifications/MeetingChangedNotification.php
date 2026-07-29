@@ -40,7 +40,7 @@ class MeetingChangedNotification extends Notification implements ShouldQueue
         if ($this->change === self::RESCHEDULED) {
             $message->line($this->whenLine())
                 ->line('Your earlier response has been cleared, so please answer again.')
-                ->action('Respond to the invitation', config('app.frontend_url')."/dashboard/meetings/{$this->meeting->id}");
+                ->action('Respond to the invitation', config('app.frontend_url')."/meetings/{$this->meeting->id}");
         }
 
         return $message;

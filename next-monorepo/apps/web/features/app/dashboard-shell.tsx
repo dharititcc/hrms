@@ -1,6 +1,6 @@
 "use client"
 
-import { BriefcaseBusiness, CalendarCheck, CalendarDays, CheckSquare, ChevronDown, ClipboardList, DollarSign, FolderKanban, LayoutDashboard, LogOut, Menu, Moon, Receipt, Settings, Sun, Users, Wrench, X } from "lucide-react"
+import { BriefcaseBusiness, CalendarCheck, CalendarDays, CheckSquare, ChevronDown, ClipboardList, DollarSign, FolderKanban, LayoutDashboard, LogOut, Menu, Moon, Receipt, Settings, ShieldCheck, Sun, Users, Wrench, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
@@ -19,30 +19,38 @@ import type { Permission } from "@/types/permission"
  * you can see, and settings are your own.
  */
 const NAV: { href: string; label: string; icon: typeof Users; permission?: Permission }[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/employees", label: "Employees", icon: Users, permission: "employees.view" },
-  { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance.view" },
-  { href: "/dashboard/leave", label: "Leave", icon: ClipboardList, permission: "leave.view" },
-  { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, permission: "tasks.view" },
-  { href: "/dashboard/meetings", label: "Meetings", icon: CalendarDays, permission: "meetings.view" },
-  { href: "/dashboard/projects", label: "Projects", icon: FolderKanban, permission: "projects.view" },
-  { href: "/dashboard/payroll", label: "Payroll", icon: DollarSign, permission: "payroll.view" },
-  { href: "/dashboard/expenses", label: "Expenses", icon: Receipt, permission: "expenses.view" },
-  { href: "/dashboard/recruitment", label: "Recruitment", icon: BriefcaseBusiness, permission: "recruitment.view" },
-  { href: "/dashboard/operations", label: "Operations", icon: Wrench, permission: "assets.view" },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/employees", label: "Employees", icon: Users, permission: "employees.view" },
+  { href: "/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance.view" },
+  { href: "/leave", label: "Leave", icon: ClipboardList, permission: "leave.view" },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare, permission: "tasks.view" },
+  { href: "/meetings", label: "Meetings", icon: CalendarDays, permission: "meetings.view" },
+  { href: "/projects", label: "Projects", icon: FolderKanban, permission: "projects.view" },
+  { href: "/payroll", label: "Payroll", icon: DollarSign, permission: "payroll.view" },
+  { href: "/expenses", label: "Expenses", icon: Receipt, permission: "expenses.view" },
+  { href: "/recruitment", label: "Recruitment", icon: BriefcaseBusiness, permission: "recruitment.view" },
+  { href: "/operations", label: "Operations", icon: Wrench, permission: "assets.view" },
+  { href: "/settings", label: "Settings", icon: Settings },
 ]
 
 /**
  * Overview matches only its exact path; every other entry also matches its
- * detail pages, so /dashboard/tasks/12 keeps Tasks highlighted.
+ * detail pages, so /tasks/12 keeps Tasks highlighted.
  */
 function isActive(pathname: string, href: string): boolean {
-  return href === "/dashboard" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
+  return href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
 }
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return <ProtectedRoute><DashboardShell>{children}</DashboardShell></ProtectedRoute>
+}
+
+/** What each role is called on screen, rather than the raw value. */
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  employee: "Employee",
+  client: "Client",
 }
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -51,7 +59,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuthStore()
   const pathname = usePathname() ?? ""
-  const { can, isLoading: permissionsLoading } = usePermissions()
+  const { can, role, isWorkspaceOwner, isLoading: permissionsLoading } = usePermissions()
+  const roleLabel = role ? ROLE_LABELS[role] ?? role : null
   // Until permissions arrive only the ungated entries show, so a link never
   // appears and then disappears under the cursor.
   const visible = NAV.filter((entry) => !entry.permission || can(entry.permission))
@@ -64,6 +73,15 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <BrandMark />
           <Button variant="ghost" size="icon-sm" className="md:hidden" aria-label="Close navigation" onPress={() => setOpen(false)}><X /></Button>
         </div>
+
+        {/* Which role is signed in decides what is in this menu, so it belongs
+            beside it rather than buried in the account dropdown. */}
+        {roleLabel && (
+          <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <ShieldCheck className="size-3.5" />
+            Signed in as <span className="font-medium text-foreground">{roleLabel}</span>
+          </p>
+        )}
 
         <nav className="mt-8 grid gap-1" aria-busy={permissionsLoading}>
           {visible.map(({ href, label, icon: Icon }) => {
@@ -109,8 +127,19 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <ChevronDown />
               </Button>
               {menuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border bg-popover p-1 shadow-lg">
-                  <p className="truncate px-3 py-2 text-xs text-muted-foreground">{user?.email}</p>
+                <div className="absolute right-0 mt-2 w-56 rounded-xl border bg-popover p-1 shadow-lg">
+                  <div className="px-3 py-2">
+                    <p className="truncate text-sm font-medium">{user?.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                    {roleLabel && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Signed in as <span className="font-medium text-foreground">{roleLabel}</span>
+                        {/* The owner is an admin by virtue of owning the
+                            workspace, not by having been given the role. */}
+                        {isWorkspaceOwner && " · workspace owner"}
+                      </p>
+                    )}
+                  </div>
                   <Button variant="ghost" className="w-full justify-start" onPress={() => logout()}><LogOut />Sign out</Button>
                 </div>
               )}

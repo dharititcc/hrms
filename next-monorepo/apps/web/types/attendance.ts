@@ -94,3 +94,39 @@ export type CheckInInput = {
   longitude?: number
   address?: string | null
 }
+
+/** Office hours: what "late" and "a full day" are measured against. */
+export type WorkShift = {
+  id: number
+  name: string
+  starts_at: string
+  ends_at: string
+  grace_minutes: number
+  break_minutes: number
+  is_default: boolean
+  is_active: boolean
+  /** The shift's length less its unpaid break. */
+  paid_minutes: number
+  created_at: string
+}
+
+export type WorkShiftListResponse = {
+  data: WorkShift[]
+  meta: {
+    /** What a workspace with no hours of its own is judged against. */
+    fallback: { starts_at: string; ends_at: string; grace_minutes: number; break_minutes: number }
+    half_day_threshold_minutes: number
+    overtime_after_minutes: number
+    break_after_minutes: number
+  }
+}
+
+export type WorkShiftInput = {
+  name: string
+  starts_at: string
+  ends_at: string
+  grace_minutes: number
+  break_minutes: number
+  is_default?: boolean
+  is_active?: boolean
+}

@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { attendanceService } from "@/services/attendance-service"
-import type { AttendanceCorrectionInput, AttendanceLocationInput, CapturedPosition, CheckInInput } from "@/types/attendance"
+import type {
+  AttendanceCorrectionInput, AttendanceLocationInput, CapturedPosition, CheckInInput, WorkShiftInput,
+} from "@/types/attendance"
 
 export function useAttendance(filters: { month?: string; employee_id?: number }) {
   return useQuery({
@@ -35,6 +37,29 @@ export function useAttendanceLocationMutations() {
     onSuccess: refresh,
   })
   const remove = useMutation({ mutationFn: (id: number) => attendanceService.removeLocation(id), onSuccess: refresh })
+
+  return { create, update, remove }
+}
+
+export function useWorkShifts() {
+  return useQuery({ queryKey: ["work-shifts"], queryFn: () => attendanceService.shifts() })
+}
+
+export function useWorkShiftMutations() {
+  const queryClient = useQueryClient()
+  // Hours decide what counts as late, so changing them changes how the
+  // attendance list reads.
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["work-shifts"] })
+    queryClient.invalidateQueries({ queryKey: ["attendance"] })
+  }
+
+  const create = useMutation({ mutationFn: (input: WorkShiftInput) => attendanceService.createShift(input), onSuccess: refresh })
+  const update = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: WorkShiftInput }) => attendanceService.updateShift(id, input),
+    onSuccess: refresh,
+  })
+  const remove = useMutation({ mutationFn: (id: number) => attendanceService.removeShift(id), onSuccess: refresh })
 
   return { create, update, remove }
 }

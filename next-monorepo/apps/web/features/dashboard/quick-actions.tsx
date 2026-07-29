@@ -51,9 +51,9 @@ export function QuickActions({ attendance, canCheckIn }: {
   }
 
   const actions = [
-    can("tasks.create") && { href: "/dashboard/tasks", label: "New task", icon: CheckSquare },
-    can("meetings.create") && { href: "/dashboard/meetings", label: "Schedule meeting", icon: CalendarPlus },
-    can("leave.create") && { href: "/dashboard/leave", label: "Request leave", icon: ClipboardList },
+    can("tasks.create") && { href: "/tasks", label: "New task", icon: CheckSquare },
+    can("meetings.create") && { href: "/meetings", label: "Schedule meeting", icon: CalendarPlus },
+    can("leave.create") && { href: "/leave", label: "Request leave", icon: ClipboardList },
   ].filter(Boolean) as { href: string; label: string; icon: typeof CheckSquare }[]
 
   if (!showAttendance && actions.length === 0) return null

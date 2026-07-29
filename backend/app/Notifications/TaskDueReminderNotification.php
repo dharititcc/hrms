@@ -29,7 +29,7 @@ class TaskDueReminderNotification extends Notification implements ShouldQueue
             ->subject($this->headline())
             ->greeting("Hello {$notifiable->name},")
             ->line($this->body())
-            ->action('View the task', config('app.frontend_url')."/dashboard/tasks/{$this->task->id}");
+            ->action('View the task', config('app.frontend_url')."/tasks/{$this->task->id}");
     }
 
     /** @return array<string, mixed> */

@@ -201,7 +201,7 @@ function MeetingList({ meetings, isLoading, meta, onPage }: {
                 return (
                   <tr key={meeting.id} className="transition-colors hover:bg-muted/20">
                     <td className="px-5 py-4">
-                      <Link href={`/dashboard/meetings/${meeting.id}`} className="font-medium hover:underline">{meeting.title}</Link>
+                      <Link href={`/meetings/${meeting.id}`} className="font-medium hover:underline">{meeting.title}</Link>
                       {meeting.host_name && <p className="mt-0.5 text-xs text-muted-foreground">Hosted by {meeting.host_name}</p>}
                     </td>
                     <td className="px-5 py-4 text-muted-foreground">

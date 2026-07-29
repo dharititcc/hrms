@@ -29,7 +29,7 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
         <p className="mt-1 text-sm text-muted-foreground">It may have been deleted, or you may not have access.</p>
         <div className="mt-4 flex gap-2">
           <Button variant="outline" onPress={() => refetch()}>Retry</Button>
-          <Link href="/dashboard/projects"><Button variant="ghost">Back to projects</Button></Link>
+          <Link href="/projects"><Button variant="ghost">Back to projects</Button></Link>
         </div>
       </div>
     )
@@ -43,7 +43,7 @@ export function ProjectDetail({ projectId }: { projectId: number }) {
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
       <div>
-        <Link href="/dashboard/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/projects" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />Projects
         </Link>
         <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
