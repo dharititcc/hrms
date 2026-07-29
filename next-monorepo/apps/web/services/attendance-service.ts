@@ -117,6 +117,30 @@ export function formatRecordedTime(
   return `${wallClock.slice(0, 5)}${zone}`
 }
 
+/**
+ * A zone in the width a table column allows: "Kolkata · GMT+5:30".
+ *
+ * The offset is read at the moment the record was made, not now, so a London
+ * day in July reads BST and one in January reads GMT. The full identifier
+ * belongs in a title attribute rather than the cell.
+ */
+export function compactTimezone(zone: string | null | undefined, at?: string | null): string {
+  if (!zone) return "—"
+
+  const city = zone.split("/").pop()?.replace(/_/g, " ") ?? zone
+
+  try {
+    const parts = new Intl.DateTimeFormat(undefined, { timeZone: zone, timeZoneName: "shortOffset" })
+      .formatToParts(at ? new Date(at) : new Date())
+    const offset = parts.find((part) => part.type === "timeZoneName")?.value
+
+    return offset ? `${city} · ${offset}` : city
+  } catch {
+    // An identifier this browser does not know still names a place.
+    return city
+  }
+}
+
 /** A link rather than an embed: embedding Maps needs an API key. */
 export function mapsLink(latitude: number, longitude: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`

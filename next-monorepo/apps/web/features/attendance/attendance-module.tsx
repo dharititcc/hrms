@@ -9,7 +9,7 @@ import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useEmployees } from "@/hooks/use-employees"
-import { formatRecordedTime, mapsLink } from "@/services/attendance-service"
+import { compactTimezone, formatRecordedTime, mapsLink } from "@/services/attendance-service"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { AttendanceRecord, AttendanceStatus } from "@/types/attendance"
@@ -109,13 +109,16 @@ export function AttendanceModule() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[52rem] text-left text-sm">
+              <table className="w-full min-w-[60rem] text-left text-sm">
                 <thead className="border-b bg-muted/30 text-xs text-muted-foreground">
                   <tr>
                     <th className="px-5 py-3 font-medium">Date</th>
                     {seesEveryone && <th className="px-5 py-3 font-medium">Employee</th>}
                     <th className="px-5 py-3 font-medium">In</th>
                     <th className="px-5 py-3 font-medium">Out</th>
+                    {/* Where the employee was, as opposed to the In and Out
+                        columns, which are in the reader's own zone. */}
+                    <th className="px-5 py-3 font-medium">Timezone</th>
                     <th className="px-5 py-3 font-medium">Worked</th>
                     <th className="px-5 py-3 font-medium">Status</th>
                     <th className="px-5 py-3 font-medium">Where</th>
@@ -181,6 +184,10 @@ function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; sh
       {showEmployee && <td className="px-5 py-4 text-muted-foreground">{record.employee_name ?? "—"}</td>}
       <td className="px-5 py-4 tabular-nums">{formatRecordedTime(record.check_in_at, record.check_in, record.timezone)}</td>
       <td className="px-5 py-4 tabular-nums">{formatRecordedTime(record.check_out_at, record.check_out, record.timezone)}</td>
+      <td className="px-5 py-4 text-xs whitespace-nowrap text-muted-foreground">
+        {/* The full identifier is too wide for the column but worth keeping. */}
+        <span title={record.timezone ?? undefined}>{compactTimezone(record.timezone, record.check_in_at)}</span>
+      </td>
       <td className="px-5 py-4 tabular-nums">
         {record.check_out ? record.worked_hours : "—"}
         {record.overtime_minutes > 0 && (
