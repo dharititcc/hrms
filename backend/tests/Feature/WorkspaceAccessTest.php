@@ -24,7 +24,7 @@ class WorkspaceAccessTest extends TestCase
 
     private int $otherSlipId = 0;
 
-    private function staffFor(User $owner, string $role = 'member', string $email = 'member@example.com'): Employee
+    private function staffFor(User $owner, string $role = 'employee', string $email = 'member@example.com'): Employee
     {
         return Employee::create([
             'owner_id' => $owner->id,
@@ -106,7 +106,7 @@ class WorkspaceAccessTest extends TestCase
         $this->assertSame(WorkspaceRole::Admin, $owner->workspaceRole());
         $this->assertTrue($owner->isWorkspaceOwner());
 
-        $employee = $this->invite($this->staffFor($owner, 'member', 'employee@example.com'));
+        $employee = $this->invite($this->staffFor($owner, 'employee', 'employee@example.com'));
         $manager = $this->invite($this->staffFor($owner, 'manager', 'manager@example.com'));
         $client = $this->invite($this->staffFor($owner, 'client', 'client@example.com'));
 
@@ -119,9 +119,9 @@ class WorkspaceAccessTest extends TestCase
     public function test_permissions_are_scoped_per_module_not_global(): void
     {
         $owner = User::factory()->create();
-        $employee = $this->invite($this->staffFor($owner, 'member', 'employee@example.com'));
+        $employee = $this->invite($this->staffFor($owner, 'employee', 'employee@example.com'));
         $client = $this->invite($this->staffFor($owner, 'client', 'client@example.com'));
-        $target = $this->staffFor($owner, 'member', 'target@example.com');
+        $target = $this->staffFor($owner, 'employee', 'target@example.com');
 
         // The whole point of resource scoping: an employee may edit a task but
         // that grant says nothing about staff records or payroll.
@@ -140,7 +140,7 @@ class WorkspaceAccessTest extends TestCase
         $this->postJson('/api/auth/employees', [
             'name' => 'New person',
             'email' => 'new@example.com',
-            'role' => 'member',
+            'role' => 'employee',
             'status' => 'active',
         ])->assertForbidden();
     }
@@ -148,14 +148,14 @@ class WorkspaceAccessTest extends TestCase
     public function test_payroll_and_approvals_are_closed_to_lower_roles(): void
     {
         $owner = User::factory()->create();
-        $employee = $this->invite($this->staffFor($owner, 'member', 'employee@example.com'));
+        $employee = $this->invite($this->staffFor($owner, 'employee', 'employee@example.com'));
         $manager = $this->invite($this->staffFor($owner, 'manager', 'manager@example.com'));
 
         // A real record, so the assertion exercises the permission rather than
         // tripping over route-model binding on a missing id.
         $expense = Expense::create([
             'owner_id' => $owner->id,
-            'staff_id' => $this->staffFor($owner, 'member', 'claimant@example.com')->id,
+            'staff_id' => $this->staffFor($owner, 'employee', 'claimant@example.com')->id,
             'title' => 'Taxi',
             'category' => 'Travel',
             'amount' => 20,
@@ -165,7 +165,7 @@ class WorkspaceAccessTest extends TestCase
 
         // Two payslips: the employee's own, and a colleague's.
         $ownPayslip = $this->payslipFor($owner, $employee->employeeId());
-        $this->otherSlipId = $this->payslipFor($owner, $this->staffFor($owner, 'member', 'other@example.com')->id)->id;
+        $this->otherSlipId = $this->payslipFor($owner, $this->staffFor($owner, 'employee', 'other@example.com')->id)->id;
 
         Sanctum::actingAs($employee);
 
@@ -189,7 +189,7 @@ class WorkspaceAccessTest extends TestCase
     public function test_permissions_endpoint_reports_the_callers_grants(): void
     {
         $owner = User::factory()->create();
-        $employee = $this->invite($this->staffFor($owner, 'member', 'employee@example.com'));
+        $employee = $this->invite($this->staffFor($owner, 'employee', 'employee@example.com'));
 
         Sanctum::actingAs($employee);
         $response = $this->getJson('/api/auth/permissions')->assertOk();
@@ -207,7 +207,7 @@ class WorkspaceAccessTest extends TestCase
     {
         $ownerA = User::factory()->create();
         $ownerB = User::factory()->create();
-        $staffOfB = $this->staffFor($ownerB, 'member', 'b-staff@example.com');
+        $staffOfB = $this->staffFor($ownerB, 'employee', 'b-staff@example.com');
 
         // Both owners are Admins holding every permission; that must never let one
         // reach the other's records.
@@ -223,8 +223,8 @@ class WorkspaceAccessTest extends TestCase
         $ownerA = User::factory()->create();
         $ownerB = User::factory()->create();
 
-        $this->invite($this->staffFor($ownerA, 'member', 'shared@example.com'));
-        $duplicate = $this->staffFor($ownerB, 'member', 'shared@example.com');
+        $this->invite($this->staffFor($ownerA, 'employee', 'shared@example.com'));
+        $duplicate = $this->staffFor($ownerB, 'employee', 'shared@example.com');
 
         Sanctum::actingAs($ownerB);
         $this->postJson("/api/auth/employees/{$duplicate->id}/invite")->assertStatus(422);

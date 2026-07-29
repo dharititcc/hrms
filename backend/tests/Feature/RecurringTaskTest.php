@@ -36,7 +36,7 @@ class RecurringTaskTest extends TestCase
 
     private function teammate(User $owner): User
     {
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);
 
         return $employee->refresh()->user;

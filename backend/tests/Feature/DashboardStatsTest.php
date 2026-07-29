@@ -36,7 +36,7 @@ class DashboardStatsTest extends TestCase
 
     private function teammate(User $owner): User
     {
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);
 
         return $employee->refresh()->user;
@@ -93,7 +93,7 @@ class DashboardStatsTest extends TestCase
     {
         $owner = User::factory()->create();
         $mate = $this->teammate($owner);
-        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
+        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'employee', 'status' => 'active']);
 
         $meeting = Meeting::create([
             'owner_id' => $owner->id, 'title' => 'Standup', 'type' => 'google_meet', 'status' => 'scheduled',
@@ -148,7 +148,7 @@ class DashboardStatsTest extends TestCase
     {
         $owner = User::factory()->create();
         $mate = $this->teammate($owner);
-        $absent = Employee::create(['owner_id' => $owner->id, 'name' => 'Nobody', 'email' => 'n@example.com', 'role' => 'member', 'status' => 'active']);
+        $absent = Employee::create(['owner_id' => $owner->id, 'name' => 'Nobody', 'email' => 'n@example.com', 'role' => 'employee', 'status' => 'active']);
 
         Attendance::create([
             'owner_id' => $owner->id, 'staff_id' => $mate->employeeId(), 'work_date' => now()->toDateString(),

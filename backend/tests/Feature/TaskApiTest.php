@@ -77,7 +77,7 @@ class TaskApiTest extends TestCase
             ->assertJsonValidationErrors('assignee_ids.0');
 
         // An invited staff member is assignable.
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);
 
         $this->postJson("/api/auth/projects/{$project->id}/tasks", $this->payload(['assignee_ids' => [$employee->refresh()->user_id]]))
@@ -88,8 +88,8 @@ class TaskApiTest extends TestCase
     public function test_workspace_users_lists_the_owner_and_invited_staff_only(): void
     {
         $owner = User::factory()->create();
-        $invited = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
+        $invited = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
+        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($invited);
 
         Sanctum::actingAs($owner);

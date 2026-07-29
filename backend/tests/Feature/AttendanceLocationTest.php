@@ -71,7 +71,7 @@ class AttendanceLocationTest extends TestCase
     public function test_deleting_an_office_keeps_the_attendance_recorded_there(): void
     {
         $owner = User::factory()->create();
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
         $office = AttendanceLocation::create([...$this->payload(), 'owner_id' => $owner->id, 'is_active' => true]);
 
         $attendance = Attendance::create([
@@ -90,7 +90,7 @@ class AttendanceLocationTest extends TestCase
     public function test_employees_may_read_offices_but_not_change_them(): void
     {
         $owner = User::factory()->create();
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);
         AttendanceLocation::create([...$this->payload(), 'owner_id' => $owner->id, 'is_active' => true]);
 

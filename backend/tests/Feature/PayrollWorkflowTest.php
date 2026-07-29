@@ -29,7 +29,7 @@ class PayrollWorkflowTest extends TestCase
     {
         return Employee::create([
             'owner_id' => $this->owner->id, 'name' => $name, 'email' => $email,
-            'role' => 'member', 'status' => 'active',
+            'role' => 'employee', 'status' => 'active',
         ]);
     }
 

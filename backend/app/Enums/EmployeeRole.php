@@ -6,7 +6,6 @@ enum EmployeeRole: string
 {
     case Admin = 'admin';
     case Manager = 'manager';
-    /** Maps to the Employee workspace role. */
-    case Member = 'member';
+    case Employee = 'employee';
     case Client = 'client';
 }

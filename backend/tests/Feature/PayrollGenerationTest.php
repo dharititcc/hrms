@@ -54,7 +54,7 @@ class PayrollGenerationTest extends TestCase
     {
         return Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Grace Hopper',
-            'email' => $email, 'role' => 'member', 'status' => 'active',
+            'email' => $email, 'role' => 'employee', 'status' => 'active',
         ]);
     }
 

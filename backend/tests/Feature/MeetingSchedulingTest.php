@@ -41,7 +41,7 @@ class MeetingSchedulingTest extends TestCase
 
     private function teammate(User $owner, string $email = 'grace@example.com'): User
     {
-        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'employee', 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);
 
         return $employee->refresh()->user;

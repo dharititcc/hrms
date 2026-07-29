@@ -53,7 +53,7 @@ class SalaryCalculatorTest extends TestCase
             'owner_id' => $this->owner->id,
             'name' => 'Grace Hopper',
             'email' => 'grace'.uniqid().'@example.com',
-            'role' => 'member',
+            'role' => 'employee',
             'status' => 'active',
         ]);
 

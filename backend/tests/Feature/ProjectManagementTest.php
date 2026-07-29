@@ -19,7 +19,7 @@ class ProjectManagementTest extends TestCase
             'owner_id' => $owner->id,
             'name' => 'Grace Hopper',
             'email' => $email,
-            'role' => 'member',
+            'role' => 'employee',
             'status' => 'active',
         ]);
     }

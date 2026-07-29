@@ -29,7 +29,7 @@ class AttendanceCaptureTest extends TestCase
         $this->owner = User::factory()->create();
         $this->staff = Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Grace Hopper',
-            'email' => 'grace@example.com', 'role' => 'member', 'status' => 'active',
+            'email' => 'grace@example.com', 'role' => 'employee', 'status' => 'active',
         ]);
 
         WorkShift::create([
@@ -222,7 +222,7 @@ class AttendanceCaptureTest extends TestCase
     {
         $colleague = Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Ada', 'email' => 'ada@example.com',
-            'role' => 'member', 'status' => 'active',
+            'role' => 'employee', 'status' => 'active',
         ]);
         app(EmployeeInvitationService::class)->invite($this->staff);
 

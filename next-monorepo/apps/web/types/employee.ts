@@ -1,4 +1,4 @@
-export type EmployeeRole = "admin" | "manager" | "member"
+export type EmployeeRole = "admin" | "manager" | "employee"
 export type EmployeeStatus = "active" | "inactive"
 
 export type Employee = {

@@ -39,8 +39,8 @@ class RecordScopeTest extends TestCase
     public function test_employees_see_only_their_own_attendance_leave_and_expenses(): void
     {
         $owner = User::factory()->create();
-        [$employee, $account] = $this->invited($owner, 'member', 'employee@example.com');
-        $colleague = $this->staffFor($owner, 'member', 'colleague@example.com');
+        [$employee, $account] = $this->invited($owner, 'employee', 'employee@example.com');
+        $colleague = $this->staffFor($owner, 'employee', 'colleague@example.com');
 
         $type = LeaveType::create(['owner_id' => $owner->id, 'name' => 'Annual leave', 'days_per_year' => 20, 'is_active' => true]);
 
@@ -66,8 +66,8 @@ class RecordScopeTest extends TestCase
     public function test_employees_cannot_file_records_in_a_colleagues_name(): void
     {
         $owner = User::factory()->create();
-        [, $account] = $this->invited($owner, 'member', 'employee@example.com');
-        $colleague = $this->staffFor($owner, 'member', 'colleague@example.com');
+        [, $account] = $this->invited($owner, 'employee', 'employee@example.com');
+        $colleague = $this->staffFor($owner, 'employee', 'colleague@example.com');
         $type = LeaveType::create(['owner_id' => $owner->id, 'name' => 'Annual leave', 'days_per_year' => 20, 'is_active' => true]);
 
         Sanctum::actingAs($account);
@@ -88,7 +88,7 @@ class RecordScopeTest extends TestCase
     public function test_employees_can_still_act_for_themselves(): void
     {
         $owner = User::factory()->create();
-        [$employee, $account] = $this->invited($owner, 'member', 'employee@example.com');
+        [$employee, $account] = $this->invited($owner, 'employee', 'employee@example.com');
 
         Sanctum::actingAs($account);
 
@@ -103,7 +103,7 @@ class RecordScopeTest extends TestCase
     {
         $owner = User::factory()->create();
         [, $manager] = $this->invited($owner, 'manager', 'manager@example.com');
-        $colleague = $this->staffFor($owner, 'member', 'colleague@example.com');
+        $colleague = $this->staffFor($owner, 'employee', 'colleague@example.com');
 
         Sanctum::actingAs($manager);
 
@@ -127,7 +127,7 @@ class RecordScopeTest extends TestCase
         $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(2, 'data');
 
         // An employee holds view-all and sees all three.
-        [, $account] = $this->invited($owner, 'member', 'employee@example.com');
+        [, $account] = $this->invited($owner, 'employee', 'employee@example.com');
         Sanctum::actingAs($account);
         $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(3, 'data');
     }
@@ -161,7 +161,7 @@ class RecordScopeTest extends TestCase
     public function test_attendance_month_filter_works_on_this_database(): void
     {
         $owner = User::factory()->create();
-        $employee = $this->staffFor($owner, 'member', 'employee@example.com');
+        $employee = $this->staffFor($owner, 'employee', 'employee@example.com');
 
         Attendance::create(['owner_id' => $owner->id, 'staff_id' => $employee->id, 'work_date' => now()->toDateString(), 'status' => 'present']);
         Attendance::create(['owner_id' => $owner->id, 'staff_id' => $employee->id, 'work_date' => now()->subMonths(2)->toDateString(), 'status' => 'present']);

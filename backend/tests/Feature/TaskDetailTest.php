@@ -35,7 +35,7 @@ class TaskDetailTest extends TestCase
     }
 
     /** Invites a staff member and returns their account. */
-    private function teammate(User $owner, string $email = 'grace@example.com', string $role = 'member'): User
+    private function teammate(User $owner, string $email = 'grace@example.com', string $role = 'employee'): User
     {
         $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace Hopper', 'email' => $email, 'role' => $role, 'status' => 'active']);
         app(EmployeeInvitationService::class)->invite($employee);

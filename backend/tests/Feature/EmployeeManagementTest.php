@@ -48,7 +48,7 @@ class EmployeeManagementTest extends TestCase
             'owner_id' => $owner->id,
             'name' => 'Private teammate',
             'email' => 'private@example.com',
-            'role' => 'member',
+            'role' => 'employee',
             'status' => 'active',
         ]);
 

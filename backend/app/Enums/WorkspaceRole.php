@@ -19,7 +19,7 @@ enum WorkspaceRole: string
         return match ($role) {
             EmployeeRole::Admin => self::Admin,
             EmployeeRole::Manager => self::Manager,
-            EmployeeRole::Member => self::Employee,
+            EmployeeRole::Employee => self::Employee,
             EmployeeRole::Client => self::Client,
         };
     }
