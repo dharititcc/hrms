@@ -159,11 +159,17 @@ class TaskDetailTest extends TestCase
         $owner = User::factory()->create();
         $client = $this->teammate($owner, 'client@example.com', 'client');
         $task = $this->task($owner);
+        // Clients only see tasks they belong to, so put them on this one.
+        $task->assignees()->sync([$client->id]);
 
         Sanctum::actingAs($client);
 
         $this->postJson("/api/auth/tasks/{$task->id}/comments", ['body' => 'Question from the client'])->assertCreated();
         $this->postJson("/api/auth/tasks/{$task->id}/checklist", ['title' => 'Nope'])->assertForbidden();
+
+        // A task they are not attached to stays out of reach entirely.
+        $unrelated = $this->task($owner);
+        $this->getJson("/api/auth/tasks/{$unrelated->id}")->assertForbidden();
     }
 
     // --- Checklist ------------------------------------------------------

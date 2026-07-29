@@ -30,17 +30,32 @@ class DashboardService
         // Each section is omitted rather than zeroed when the caller lacks
         // permission, so a Client is never shown staff or project figures.
         return array_filter([
-            'tasks' => $user->hasPermission(Module::Tasks, Action::View) ? $this->taskStats($ownerId, $user->id, $today) : null,
-            'meetings' => $user->hasPermission(Module::Meetings, Action::View) ? $this->meetingStats($ownerId, $user->id) : null,
+            'tasks' => $user->hasPermission(Module::Tasks, Action::View) ? $this->taskStats($ownerId, $user, $today) : null,
+            'meetings' => $user->hasPermission(Module::Meetings, Action::View) ? $this->meetingStats($ownerId, $user) : null,
             'people' => $user->hasPermission(Module::Staff, Action::View) ? $this->peopleStats($ownerId) : null,
             'projects' => $user->hasPermission(Module::Projects, Action::View) ? $this->projectStats($ownerId) : null,
             'recent_activity' => $user->hasPermission(Module::Activity, Action::View) ? $this->recentActivity($ownerId) : null,
         ], fn ($section) => $section !== null);
     }
 
-    private function taskStats(int $ownerId, int $userId, string $today): array
+    private function taskStats(int $ownerId, User $user, string $today): array
     {
-        $base = fn () => Task::query()->where('owner_id', $ownerId)->active();
+        $userId = $user->id;
+
+        // Counts must respect row scoping, or a Client would learn how many
+        // tasks exist that they cannot open.
+        $base = fn () => Task::query()
+            ->where('owner_id', $ownerId)
+            ->active()
+            ->when(
+                ! $user->hasPermission(Module::Tasks, Action::ViewAll),
+                fn ($query) => $query->where(function ($query) use ($userId): void {
+                    $query->where('is_public', true)
+                        ->orWhere('created_by', $userId)
+                        ->orWhereHas('assignees', fn ($q) => $q->where('users.id', $userId))
+                        ->orWhereHas('followers', fn ($q) => $q->where('users.id', $userId));
+                }),
+            );
 
         return [
             'total' => $base()->count(),
@@ -61,9 +76,20 @@ class DashboardService
         ];
     }
 
-    private function meetingStats(int $ownerId, int $userId): array
+    private function meetingStats(int $ownerId, User $user): array
     {
-        $base = fn () => Meeting::query()->where('owner_id', $ownerId);
+        $userId = $user->id;
+
+        $base = fn () => Meeting::query()
+            ->where('owner_id', $ownerId)
+            ->when(
+                ! $user->hasPermission(Module::Meetings, Action::ViewAll),
+                fn ($query) => $query->where(function ($query) use ($userId): void {
+                    $query->whereHas('participants', fn ($q) => $q->where('user_id', $userId))
+                        ->orWhere('host_id', $userId)
+                        ->orWhere('organizer_id', $userId);
+                }),
+            );
 
         return [
             'today' => $base()

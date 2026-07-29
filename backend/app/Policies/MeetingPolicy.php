@@ -17,9 +17,19 @@ class MeetingPolicy
         return $user->hasPermission(Module::Meetings, Action::View);
     }
 
+    /** As with tasks, involvement is checked so an id cannot be guessed. */
     public function view(User $user, Meeting $meeting): bool
     {
-        return $this->allowsInWorkspace($user, $meeting->owner_id, Module::Meetings, Action::View);
+        if (! $this->allowsInWorkspace($user, $meeting->owner_id, Module::Meetings, Action::View)) {
+            return false;
+        }
+
+        if ($user->hasPermission(Module::Meetings, Action::ViewAll)) {
+            return true;
+        }
+
+        return in_array($user->id, [$meeting->host_id, $meeting->organizer_id], strict: true)
+            || $meeting->participants()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user): bool

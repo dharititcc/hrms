@@ -17,9 +17,9 @@ class TaskService
 {
     public function __construct(private readonly TaskRepository $repository) {}
 
-    public function list(int $ownerId, array $filters = []): LengthAwarePaginator
+    public function list(int $ownerId, array $filters = [], ?User $viewer = null): LengthAwarePaginator
     {
-        return $this->repository->paginateForOwner($ownerId, $filters);
+        return $this->repository->paginateForOwner($ownerId, $filters, $viewer);
     }
 
     public function listForRelated(Model $related): Collection

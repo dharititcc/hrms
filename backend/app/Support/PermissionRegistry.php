@@ -14,11 +14,10 @@ use App\Enums\WorkspaceRole;
  * the set is fixed by the product; that also means a role cannot be
  * misconfigured at runtime into locking everybody out.
  *
- * KNOWN LIMIT: these are role-level, not row-level. A role holding leave.view
- * sees every leave request in the workspace, not only its own. Restricting
- * people to their own records needs per-query scoping in each module and is
- * not what this class decides — which is why Employee is granted no payroll
- * access at all rather than "their own payslip".
+ * Two levels of visibility. On the personal modules — attendance, leave,
+ * payroll, expenses — "view" means your own records and "view-all" means
+ * everyone's. Queries enforce that split via App\Support\RecordScope, so an
+ * Employee can read their own payslip without seeing the payroll.
  */
 final class PermissionRegistry
 {
@@ -36,49 +35,52 @@ final class PermissionRegistry
             WorkspaceRole::Admin->value => self::ALL,
 
             WorkspaceRole::Manager->value => [
-                Module::Staff->value => [Action::View, Action::Create, Action::Edit, Action::Delete, Action::Assign, Action::Export],
-                Module::Attendance->value => [Action::View, Action::Create, Action::Edit, Action::Export],
-                Module::Leave->value => [Action::View, Action::Create, Action::Edit, Action::Approve, Action::Export],
-                Module::Payroll->value => [Action::View, Action::Create, Action::Edit, Action::Export],
-                Module::Expenses->value => [Action::View, Action::Create, Action::Edit, Action::Approve, Action::Export],
+                Module::Staff->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete, Action::Assign, Action::Export],
+                Module::Attendance->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export],
+                Module::Leave->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Approve, Action::Export],
+                Module::Payroll->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export],
+                Module::Expenses->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Approve, Action::Export],
                 Module::Tasks->value => self::ALL,
                 Module::Meetings->value => self::ALL,
                 Module::Projects->value => self::ALL,
-                Module::Recruitment->value => [Action::View, Action::Create, Action::Edit, Action::Delete],
-                Module::Performance->value => [Action::View, Action::Create, Action::Edit],
-                Module::Assets->value => [Action::View, Action::Create, Action::Edit, Action::Delete],
-                Module::Announcements->value => [Action::View, Action::Create, Action::Edit, Action::Delete],
-                Module::Reports->value => [Action::View, Action::Export],
-                Module::Attachments->value => [Action::View, Action::Upload, Action::Delete],
-                Module::Activity->value => [Action::View],
+                Module::Recruitment->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete],
+                Module::Performance->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit],
+                Module::Assets->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete],
+                Module::Announcements->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete],
+                Module::Reports->value => [Action::View, Action::ViewAll, Action::Export],
+                Module::Attachments->value => [Action::View, Action::ViewAll, Action::Upload, Action::Delete],
+                Module::Activity->value => [Action::View, Action::ViewAll],
             ],
 
             WorkspaceRole::Employee->value => [
-                Module::Staff->value => [Action::View],
-                // Clocking in and requesting leave are creates against oneself.
+                // The staff directory is shared; personal modules are not.
+                Module::Staff->value => [Action::View, Action::ViewAll],
+                // View without view-all: their own attendance, leave, payslips
+                // and expense claims, never a colleague's.
                 Module::Attendance->value => [Action::View, Action::Create],
                 Module::Leave->value => [Action::View, Action::Create],
-                // Deliberately no payroll: without row-level scoping, any read
-                // would expose every salary in the workspace.
+                Module::Payroll->value => [Action::View],
                 Module::Expenses->value => [Action::View, Action::Create],
-                Module::Tasks->value => [Action::View, Action::Create, Action::Edit, Action::Comment, Action::Upload],
-                Module::Meetings->value => [Action::View, Action::Create, Action::Edit, Action::Comment, Action::Upload],
-                Module::Projects->value => [Action::View],
-                Module::Recruitment->value => [Action::View],
+                // Collaborative work is visible across the workspace.
+                Module::Tasks->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Comment, Action::Upload],
+                Module::Meetings->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Comment, Action::Upload],
+                Module::Projects->value => [Action::View, Action::ViewAll],
+                Module::Recruitment->value => [Action::View, Action::ViewAll],
                 Module::Performance->value => [Action::View],
-                Module::Assets->value => [Action::View],
-                Module::Announcements->value => [Action::View],
-                Module::Attachments->value => [Action::View, Action::Upload],
-                Module::Activity->value => [Action::View],
+                Module::Assets->value => [Action::View, Action::ViewAll],
+                Module::Announcements->value => [Action::View, Action::ViewAll],
+                Module::Attachments->value => [Action::View, Action::ViewAll, Action::Upload],
+                Module::Activity->value => [Action::View, Action::ViewAll],
             ],
 
             // An external collaborator: read the work they are involved in and
-            // take part in discussion, nothing else.
+            // take part in discussion, nothing else. No view-all anywhere, so
+            // they see only tasks and meetings they belong to.
             WorkspaceRole::Client->value => [
                 Module::Tasks->value => [Action::View, Action::Comment],
                 Module::Meetings->value => [Action::View, Action::Comment],
-                Module::Projects->value => [Action::View],
-                Module::Announcements->value => [Action::View],
+                Module::Projects->value => [Action::View, Action::ViewAll],
+                Module::Announcements->value => [Action::View, Action::ViewAll],
                 Module::Attachments->value => [Action::View],
             ],
         ];

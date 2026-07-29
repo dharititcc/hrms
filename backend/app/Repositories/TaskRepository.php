@@ -2,8 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Enums\TaskStatus;
 use App\Models\Task;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -28,12 +31,23 @@ class TaskRepository
 
     private const STATUS_ORDER = "CASE status WHEN 'pending' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'review' THEN 3 WHEN 'on_hold' THEN 4 WHEN 'completed' THEN 5 ELSE 6 END";
 
-    public function paginateForOwner(int $ownerId, array $filters = []): LengthAwarePaginator
+    public function paginateForOwner(int $ownerId, array $filters = [], ?User $viewer = null): LengthAwarePaginator
     {
         $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
         return Task::query()
             ->where('owner_id', $ownerId)
+            // Without tasks.view-all — a Client — only tasks they are attached
+            // to, or that were explicitly marked public.
+            ->when(
+                $viewer !== null && ! $viewer->hasPermission(Module::Tasks, Action::ViewAll),
+                fn ($query) => $query->where(function ($query) use ($viewer): void {
+                    $query->where('is_public', true)
+                        ->orWhere('created_by', $viewer->id)
+                        ->orWhereHas('assignees', fn ($q) => $q->where('users.id', $viewer->id))
+                        ->orWhereHas('followers', fn ($q) => $q->where('users.id', $viewer->id));
+                }),
+            )
             // The list shows what each task hangs off, which the board does not need.
             ->with([...self::WITH, 'related'])
             // Archived tasks are hidden unless explicitly asked for.

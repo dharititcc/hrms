@@ -6,6 +6,8 @@ use App\Enums\Action;
 use App\Enums\Module;
 use App\Enums\WorkspaceRole;
 use App\Models\Expense;
+use App\Models\PayrollPeriod;
+use App\Models\PayrollRecord;
 use App\Models\Staff;
 use App\Models\User;
 use App\Services\StaffInvitationService;
@@ -27,6 +29,26 @@ class WorkspaceAccessTest extends TestCase
             'email' => $email,
             'role' => $role,
             'status' => 'active',
+        ]);
+    }
+
+    private function payslipFor(User $owner, ?int $staffId): PayrollRecord
+    {
+        $period = PayrollPeriod::create([
+            'owner_id' => $owner->id,
+            'name' => 'August',
+            'start_date' => now()->startOfMonth()->toDateString(),
+            'end_date' => now()->endOfMonth()->toDateString(),
+        ]);
+
+        return PayrollRecord::create([
+            'owner_id' => $owner->id,
+            'payroll_period_id' => $period->id,
+            'staff_id' => $staffId,
+            'basic_salary' => 3000,
+            'allowances' => 0,
+            'deductions' => 0,
+            'net_salary' => 3000,
         ]);
     }
 
@@ -98,7 +120,9 @@ class WorkspaceAccessTest extends TestCase
         // that grant says nothing about staff records or payroll.
         $this->assertTrue($employee->hasPermission(Module::Tasks, Action::Edit));
         $this->assertFalse($employee->hasPermission(Module::Staff, Action::Edit));
-        $this->assertFalse($employee->hasPermission(Module::Payroll, Action::View));
+        // They may read their own payslip but not the workspace's payroll.
+        $this->assertTrue($employee->hasPermission(Module::Payroll, Action::View));
+        $this->assertFalse($employee->hasPermission(Module::Payroll, Action::ViewAll));
 
         Sanctum::actingAs($employee);
         $this->deleteJson("/api/auth/staff/{$target->id}")->assertForbidden();
@@ -132,19 +156,25 @@ class WorkspaceAccessTest extends TestCase
             'status' => 'pending',
         ]);
 
-        // Employees could previously read every salary in the workspace.
+        // Two payslips: the employee's own, and a colleague's.
+        $ownPayslip = $this->payslipFor($owner, $employee->staffId());
+        $this->payslipFor($owner, $this->staffFor($owner, 'member', 'other@example.com')->id);
+
         Sanctum::actingAs($employee);
-        $this->getJson('/api/auth/payroll')->assertForbidden();
+
+        // Row scoping: their own payslip only, never the colleague's.
+        $payroll = $this->getJson('/api/auth/payroll')->assertOk();
+        $payroll->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $ownPayslip->id);
         $this->postJson('/api/auth/payroll', [])->assertForbidden();
 
-        // Submitting an expense is fine; approving one is not.
-        $this->getJson('/api/auth/expenses')->assertOk();
+        // The claim they can see is their own; approving is not theirs to do.
+        $this->getJson('/api/auth/expenses')->assertOk()->assertJsonCount(0, 'data');
         $this->patchJson("/api/auth/expenses/{$expense->id}/status", ['status' => 'approved'])->assertForbidden();
         $this->assertFalse($employee->hasPermission(Module::Leave, Action::Approve));
 
-        // Managers hold payroll and approval permissions.
+        // Managers hold view-all, so they see both payslips.
         Sanctum::actingAs($manager);
-        $this->getJson('/api/auth/payroll')->assertOk();
+        $this->getJson('/api/auth/payroll')->assertOk()->assertJsonCount(2, 'data');
         $this->patchJson("/api/auth/expenses/{$expense->id}/status", ['status' => 'approved'])->assertOk();
     }
 
@@ -159,7 +189,9 @@ class WorkspaceAccessTest extends TestCase
         $this->assertSame('employee', $response->json('data.role'));
         $this->assertFalse($response->json('data.is_workspace_owner'));
         $this->assertContains('tasks.edit', $response->json('data.permissions'));
-        $this->assertNotContains('payroll.view', $response->json('data.permissions'));
+        // Own payslip yes, everyone's no.
+        $this->assertContains('payroll.view', $response->json('data.permissions'));
+        $this->assertNotContains('payroll.view-all', $response->json('data.permissions'));
         $this->assertNotContains('staff.delete', $response->json('data.permissions'));
     }
 

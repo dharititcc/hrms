@@ -24,7 +24,7 @@ class MeetingController extends Controller
         $this->authorize('viewAny', Meeting::class);
 
         return MeetingResource::collection(
-            $this->service->list($request->user()->workspaceOwnerId(), $request->validated()),
+            $this->service->list($request->user()->workspaceOwnerId(), $request->validated(), $request->user()),
         )->response();
     }
 

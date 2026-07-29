@@ -2,14 +2,17 @@
 
 namespace App\Repositories;
 
+use App\Enums\Action;
+use App\Enums\Module;
 use App\Models\Meeting;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class MeetingRepository
 {
     private const WITH = ['host', 'organizer', 'participants.user', 'guests', 'tags'];
 
-    public function paginateForOwner(int $ownerId, array $filters = []): LengthAwarePaginator
+    public function paginateForOwner(int $ownerId, array $filters = [], ?User $viewer = null): LengthAwarePaginator
     {
         $sort = in_array($filters['sort'] ?? null, ['starts_at', 'title', 'created_at'], strict: true)
             ? $filters['sort']
@@ -19,6 +22,16 @@ class MeetingRepository
         return Meeting::query()
             ->where('owner_id', $ownerId)
             ->with(self::WITH)
+            // Without meetings.view-all — a Client — only meetings they are
+            // part of, host, or organise.
+            ->when(
+                $viewer !== null && ! $viewer->hasPermission(Module::Meetings, Action::ViewAll),
+                fn ($query) => $query->where(function ($query) use ($viewer): void {
+                    $query->whereHas('participants', fn ($q) => $q->where('user_id', $viewer->id))
+                        ->orWhere('host_id', $viewer->id)
+                        ->orWhere('organizer_id', $viewer->id);
+                }),
+            )
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('title', 'like', "%{$search}%")

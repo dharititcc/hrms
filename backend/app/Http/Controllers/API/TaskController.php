@@ -23,7 +23,7 @@ class TaskController extends Controller
     {
         $this->authorize('viewAny', Task::class);
 
-        $tasks = $this->service->list($request->user()->workspaceOwnerId(), $request->validated());
+        $tasks = $this->service->list($request->user()->workspaceOwnerId(), $request->validated(), $request->user());
 
         return TaskResource::collection($tasks)->response();
     }

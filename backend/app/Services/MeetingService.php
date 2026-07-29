@@ -25,9 +25,9 @@ class MeetingService
         private readonly MeetingLinkProvider $linkProvider,
     ) {}
 
-    public function list(int $ownerId, array $filters = []): LengthAwarePaginator
+    public function list(int $ownerId, array $filters = [], ?User $viewer = null): LengthAwarePaginator
     {
-        return $this->repository->paginateForOwner($ownerId, $filters);
+        return $this->repository->paginateForOwner($ownerId, $filters, $viewer);
     }
 
     public function find(Meeting $meeting): Meeting

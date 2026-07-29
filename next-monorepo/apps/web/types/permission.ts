@@ -4,7 +4,11 @@ export type PermissionModule =
   | "assets" | "announcements" | "reports" | "attachments" | "activity"
 
 export type PermissionAction =
-  | "view" | "create" | "edit" | "delete"
+  /** On personal modules, "view" means your own records only. */
+  | "view"
+  /** See other people's records, not just your own. */
+  | "view-all"
+  | "create" | "edit" | "delete"
   | "assign" | "approve" | "comment" | "upload" | "export"
 
 /** Mirrors the server's module.action strings, so typos fail to compile. */

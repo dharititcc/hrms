@@ -33,6 +33,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     private ?WorkspaceRole $workspaceRoleCache = null;
 
+    private ?int $staffIdCache = null;
+
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification());
@@ -93,6 +95,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->workspaceRoleCache = $role === null
             ? WorkspaceRole::Admin
             : WorkspaceRole::fromStaffRole($role);
+    }
+
+    /**
+     * This user's own staff record id, which identifies "their own" rows in
+     * attendance, leave, payroll and expenses. Null for the workspace owner,
+     * who has no staff record.
+     */
+    public function staffId(): ?int
+    {
+        return $this->staffIdCache ??= $this->staffProfile()->value('id');
     }
 
     /** Resource-scoped check: may this user perform $action on $module? */
