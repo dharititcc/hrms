@@ -22,6 +22,12 @@ class UpdateEmployeeRequest extends StoreEmployeeRequest
             'phone' => ['nullable', 'string', 'max:40'],
             'role' => ['required', Rule::enum(EmployeeRole::class)],
             'status' => ['required', Rule::enum(EmployeeStatus::class)],
+
+            // Scoped to the workspace, or an id from elsewhere could be attached.
+            'attendance_location_id' => [
+                'nullable', 'integer',
+                Rule::exists('attendance_locations', 'id')->where('owner_id', $this->user()->workspaceOwnerId()),
+            ],
         ];
     }
 }

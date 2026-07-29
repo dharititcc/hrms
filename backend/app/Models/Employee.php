@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * no behavioural gain. Every relation below therefore names its key
  * explicitly, because Eloquent would otherwise guess employee_id.
  */
-#[Fillable(['owner_id', 'name', 'email', 'phone', 'role', 'status'])]
+#[Fillable(['owner_id', 'name', 'email', 'phone', 'role', 'status', 'attendance_location_id'])]
 #[Hidden(['owner_id'])]
 class Employee extends Model
 {
@@ -42,6 +42,17 @@ class Employee extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * The office this employee normally works from, if any.
+     *
+     * Null for remote and field workers, and for everyone in a workspace that
+     * has not defined an office yet.
+     */
+    public function office(): BelongsTo
+    {
+        return $this->belongsTo(AttendanceLocation::class, 'attendance_location_id');
     }
 
     /** Bank and tax details. At most one, enforced by a unique staff_id. */

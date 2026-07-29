@@ -11,6 +11,7 @@ class EmployeeRepository
     {
         return Employee::query()
             ->where('owner_id', $ownerId)
+            ->with('office')
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('name', 'like', "%{$search}%")

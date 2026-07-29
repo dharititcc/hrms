@@ -9,6 +9,7 @@ use App\Http\Resources\ExpenseResource;
 use App\Models\Expense;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class ExpenseController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['required', 'exists:staff,id'],
+            'employee_id' => ['required', 'exists:staff,id'],
             'title' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:100'],
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -37,18 +38,20 @@ class ExpenseController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
+        $request->user()->workspaceEmployees()->findOrFail($validated['employee_id']);
 
         // Nobody may file a claim in a colleague's name unless they oversee the
         // module; otherwise the claim is forced onto the caller's own record.
         abort_unless(
-            RecordScope::allows($request->user(), Module::Expenses, (int) $validated['staff_id']),
+            RecordScope::allows($request->user(), Module::Expenses, (int) $validated['employee_id']),
             403,
             'You can only submit expenses for yourself.',
         );
 
         $expense = Expense::create([
-            ...$validated,
+            // The request field is employee_id; the column is still staff_id.
+            ...Arr::except($validated, 'employee_id'),
+            'staff_id' => $validated['employee_id'],
             'owner_id' => $request->user()->workspaceOwnerId(),
             'status' => ExpenseStatus::Pending->value,
         ]);

@@ -6,6 +6,8 @@ export const employeeSchema = z.object({
   phone: z.string().max(40, "Phone number is too long").optional(),
   role: z.enum(["admin", "manager", "employee"]),
   status: z.enum(["active", "inactive"]),
+  // Held as a string because a select's value always is; "" means none.
+  attendance_location_id: z.string().optional(),
 })
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>

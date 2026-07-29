@@ -27,7 +27,7 @@ class AttendanceCaptureTest extends TestCase
         parent::setUp();
 
         $this->owner = User::factory()->create();
-        $this->staff = Employee::create([
+        $this->employee = Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Grace Hopper',
             'email' => 'grace@example.com', 'role' => 'employee', 'status' => 'active',
         ]);
@@ -52,7 +52,7 @@ class AttendanceCaptureTest extends TestCase
         Sanctum::actingAs($this->owner);
 
         $response = $this->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120.0')
-            ->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id]);
+            ->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id]);
 
         $response->assertOk()
             ->assertJsonPath('data.status', 'present')
@@ -68,7 +68,7 @@ class AttendanceCaptureTest extends TestCase
         $this->travelTo(now()->setTime(9, 30));
         Sanctum::actingAs($this->owner);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])
             ->assertOk()
             ->assertJsonPath('data.status', 'late')
             // Grace forgives lateness; it does not move the start of the day.
@@ -80,7 +80,7 @@ class AttendanceCaptureTest extends TestCase
         $this->travelTo(now()->setTime(9, 14));
         Sanctum::actingAs($this->owner);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])
             ->assertOk()
             ->assertJsonPath('data.status', 'present')
             ->assertJsonPath('data.late_minutes', 0);
@@ -90,7 +90,7 @@ class AttendanceCaptureTest extends TestCase
     {
         $this->travelTo(now()->setTime(9, 0));
         Sanctum::actingAs($this->owner);
-        $id = $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->json('data.id');
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
 
         $this->travelTo(now()->setTime(18, 0));
         $this->postJson("/api/auth/attendance/{$id}/check-out")
@@ -105,7 +105,7 @@ class AttendanceCaptureTest extends TestCase
     {
         $this->travelTo(now()->setTime(9, 0));
         Sanctum::actingAs($this->owner);
-        $id = $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->json('data.id');
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
 
         $this->travelTo(now()->setTime(20, 0));
         $this->postJson("/api/auth/attendance/{$id}/check-out")
@@ -119,7 +119,7 @@ class AttendanceCaptureTest extends TestCase
     {
         $this->travelTo(now()->setTime(9, 0));
         Sanctum::actingAs($this->owner);
-        $id = $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->json('data.id');
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
 
         $this->travelTo(now()->setTime(12, 0));
         $this->postJson("/api/auth/attendance/{$id}/check-out")
@@ -135,7 +135,7 @@ class AttendanceCaptureTest extends TestCase
 
         // A few metres away, comfortably inside a 200m radius.
         $this->postJson('/api/auth/attendance/check-in', [
-            'staff_id' => $this->staff->id, 'latitude' => 51.5075, 'longitude' => -0.1279,
+            'employee_id' => $this->employee->id, 'latitude' => 51.5075, 'longitude' => -0.1279,
         ])->assertOk()->assertJsonPath('data.requires_approval', false);
 
         $this->assertSame($office->id, Attendance::first()->check_in_location_id);
@@ -149,7 +149,7 @@ class AttendanceCaptureTest extends TestCase
 
         // Roughly 5km away.
         $this->postJson('/api/auth/attendance/check-in', [
-            'staff_id' => $this->staff->id, 'latitude' => 51.5500, 'longitude' => -0.1278,
+            'employee_id' => $this->employee->id, 'latitude' => 51.5500, 'longitude' => -0.1278,
         ])->assertOk()
             // Flagged rather than refused, because enforcement is off.
             ->assertJsonPath('data.requires_approval', true);
@@ -170,7 +170,7 @@ class AttendanceCaptureTest extends TestCase
         Sanctum::actingAs($this->owner);
 
         $this->postJson('/api/auth/attendance/check-in', [
-            'staff_id' => $this->staff->id, 'latitude' => 51.5500, 'longitude' => -0.1278,
+            'employee_id' => $this->employee->id, 'latitude' => 51.5500, 'longitude' => -0.1278,
         ])->assertStatus(422)->assertJsonValidationErrors('location');
     }
 
@@ -183,7 +183,7 @@ class AttendanceCaptureTest extends TestCase
 
         // Being elsewhere is the point of working from home.
         $this->postJson('/api/auth/attendance/check-in', [
-            'staff_id' => $this->staff->id, 'work_mode' => WorkMode::Remote->value,
+            'employee_id' => $this->employee->id, 'work_mode' => WorkMode::Remote->value,
             'latitude' => 40.7128, 'longitude' => -74.0060,
         ])->assertOk()
             ->assertJsonPath('data.work_mode', 'remote')
@@ -199,7 +199,7 @@ class AttendanceCaptureTest extends TestCase
         // Otherwise enabling enforcement before defining an office would lock
         // everybody out.
         $this->postJson('/api/auth/attendance/check-in', [
-            'staff_id' => $this->staff->id, 'latitude' => 12.9716, 'longitude' => 77.5946,
+            'employee_id' => $this->employee->id, 'latitude' => 12.9716, 'longitude' => 77.5946,
         ])->assertOk()->assertJsonPath('data.requires_approval', false);
     }
 
@@ -207,9 +207,9 @@ class AttendanceCaptureTest extends TestCase
     {
         $this->travelTo(now()->setTime(9, 0));
         Sanctum::actingAs($this->owner);
-        $id = $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->json('data.id');
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])
             ->assertStatus(422)->assertJsonValidationErrors('check_in');
 
         $this->travelTo(now()->setTime(17, 0));
@@ -224,25 +224,59 @@ class AttendanceCaptureTest extends TestCase
             'owner_id' => $this->owner->id, 'name' => 'Ada', 'email' => 'ada@example.com',
             'role' => 'employee', 'status' => 'active',
         ]);
-        app(EmployeeInvitationService::class)->invite($this->staff);
+        app(EmployeeInvitationService::class)->invite($this->employee);
 
-        Sanctum::actingAs($this->staff->refresh()->user);
+        Sanctum::actingAs($this->employee->refresh()->user);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $colleague->id])->assertForbidden();
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $colleague->id])->assertForbidden();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->assertOk();
     }
 
     public function test_today_returns_the_callers_own_record(): void
     {
-        app(EmployeeInvitationService::class)->invite($this->staff);
+        app(EmployeeInvitationService::class)->invite($this->employee);
         $this->travelTo(now()->setTime(9, 0));
 
-        Sanctum::actingAs($this->staff->refresh()->user);
+        Sanctum::actingAs($this->employee->refresh()->user);
 
         $this->getJson('/api/auth/attendance/today')->assertOk()->assertJsonPath('data', null);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $this->staff->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->assertOk();
         $this->getJson('/api/auth/attendance/today')->assertOk()->assertJsonPath('data.status', 'present');
+    }
+
+    public function test_the_employees_own_office_wins_when_two_overlap(): void
+    {
+        // Both cover the same spot; only the assignment tells them apart.
+        $other = $this->office(51.5074, -0.1278, 500);
+        $mine = $this->office(51.5074, -0.1278, 500);
+        $mine->update(['name' => 'Southwark']);
+
+        $this->employee->update(['attendance_location_id' => $mine->id]);
+        $this->assertTrue($other->id < $mine->id, 'the other office is returned first by the query');
+
+        Sanctum::actingAs($this->owner);
+
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'latitude' => 51.5074, 'longitude' => -0.1278,
+        ])->assertOk()->assertJsonPath('data.check_in_location.office', 'Southwark');
+    }
+
+    public function test_checking_in_at_another_office_is_still_recorded_there(): void
+    {
+        $home = $this->office(51.5074, -0.1278, 200);
+        $visiting = $this->office(48.8566, 2.3522, 200);
+        $visiting->update(['name' => 'Paris']);
+
+        $this->employee->update(['attendance_location_id' => $home->id]);
+
+        Sanctum::actingAs($this->owner);
+
+        // Their own office is a preference, not a fence: visiting a different
+        // site has to work.
+        $this->postJson('/api/auth/attendance/check-in', [
+            'employee_id' => $this->employee->id, 'latitude' => 48.8566, 'longitude' => 2.3522,
+        ])->assertOk()->assertJsonPath('data.check_in_location.office', 'Paris');
     }
 
     public function test_distance_uses_a_great_circle_not_a_flat_approximation(): void

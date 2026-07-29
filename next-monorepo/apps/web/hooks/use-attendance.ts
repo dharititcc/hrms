@@ -16,8 +16,13 @@ export function useTodayAttendance() {
   return useQuery({ queryKey: ["attendance-today"], queryFn: () => attendanceService.today() })
 }
 
-export function useAttendanceLocations() {
-  return useQuery({ queryKey: ["attendance-locations"], queryFn: () => attendanceService.locations() })
+export function useAttendanceLocations(enabled = true) {
+  return useQuery({
+    queryKey: ["attendance-locations"],
+    queryFn: () => attendanceService.locations(),
+    // Callers without attendance.view would only get a 403.
+    enabled,
+  })
 }
 
 export function useAttendanceLocationMutations() {

@@ -11,6 +11,7 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -52,7 +53,7 @@ class LeaveController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['required', 'exists:staff,id'],
+            'employee_id' => ['required', 'exists:staff,id'],
             'leave_type_id' => ['required', 'exists:leave_types,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
@@ -60,18 +61,20 @@ class LeaveController extends Controller
         ]);
 
         $ownerId = $request->user()->workspaceOwnerId();
-        $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
+        $request->user()->workspaceEmployees()->findOrFail($validated['employee_id']);
         LeaveType::query()->where('owner_id', $ownerId)->findOrFail($validated['leave_type_id']);
 
         // Requesting leave on a colleague's behalf needs oversight of the module.
         abort_unless(
-            RecordScope::allows($request->user(), Module::Leave, (int) $validated['staff_id']),
+            RecordScope::allows($request->user(), Module::Leave, (int) $validated['employee_id']),
             403,
             'You can only request leave for yourself.',
         );
 
         $leaveRequest = LeaveRequest::create([
-            ...$validated,
+            // The request field is employee_id; the column is still staff_id.
+            ...Arr::except($validated, 'employee_id'),
+            'staff_id' => $validated['employee_id'],
             'owner_id' => $ownerId,
             'status' => LeaveRequestStatus::Pending->value,
         ]);

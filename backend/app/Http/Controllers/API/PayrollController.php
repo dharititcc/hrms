@@ -22,7 +22,7 @@ class PayrollController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['nullable', 'integer'],
+            'employee_id' => ['nullable', 'integer'],
             'payroll_run_id' => ['nullable', 'integer'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -34,7 +34,7 @@ class PayrollController extends Controller
         // Without payroll.view-all this returns only the caller's own payslips.
         RecordScope::apply($query, $request->user(), Module::Payroll);
 
-        $query->when($validated['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id))
+        $query->when($validated['employee_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id))
             ->when($validated['payroll_run_id'] ?? null, fn ($q, $id) => $q->where('payroll_run_id', $id));
 
         return SalarySlipResource::collection(

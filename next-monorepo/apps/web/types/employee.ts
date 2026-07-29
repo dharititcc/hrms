@@ -8,6 +8,9 @@ export type Employee = {
   phone: string | null
   role: EmployeeRole
   status: EmployeeStatus
+  /** The office they normally work from, null for remote and field workers. */
+  attendance_location_id: number | null
+  office_name?: string | null
   /** True once invited and linked to a login account. */
   has_account: boolean
   created_at: string
@@ -19,4 +22,11 @@ export type EmployeeListResponse = {
   meta: { current_page: number; last_page: number; per_page: number; total: number }
 }
 
-export type EmployeeInput = { name: string; email: string; phone?: string | null; role: EmployeeRole; status: EmployeeStatus }
+export type EmployeeInput = {
+  name: string
+  email: string
+  phone?: string | null
+  role: EmployeeRole
+  status: EmployeeStatus
+  attendance_location_id?: number | null
+}

@@ -21,7 +21,7 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
-            'staff_id' => ['nullable', 'integer'],
+            'employee_id' => ['nullable', 'integer'],
         ]);
 
         $query = Attendance::query()
@@ -37,7 +37,8 @@ class AttendanceController extends Controller
             $query->whereYear('work_date', (int) $year)->whereMonth('work_date', (int) $month);
         }
 
-        $query->when($validated['staff_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id));
+        // The request says employee_id; the column it filters is still staff_id.
+        $query->when($validated['employee_id'] ?? null, fn ($q, $id) => $q->where('staff_id', $id));
 
         return AttendanceResource::collection($query->latest('work_date')->paginate(31))->response();
     }
@@ -59,7 +60,7 @@ class AttendanceController extends Controller
     public function checkIn(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'staff_id' => ['required', 'integer', 'exists:staff,id'],
+            'employee_id' => ['required', 'integer', 'exists:staff,id'],
             'work_mode' => ['nullable', Rule::enum(WorkMode::class)],
             'work_shift_id' => ['nullable', 'integer'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
@@ -67,7 +68,7 @@ class AttendanceController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $employee = $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
+        $employee = $request->user()->workspaceEmployees()->findOrFail($validated['employee_id']);
 
         abort_unless(
             RecordScope::allows($request->user(), Module::Attendance, $employee->id),

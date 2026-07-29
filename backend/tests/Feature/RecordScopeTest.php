@@ -73,16 +73,16 @@ class RecordScopeTest extends TestCase
         Sanctum::actingAs($account);
 
         $this->postJson('/api/auth/expenses', [
-            'staff_id' => $colleague->id, 'title' => 'Not mine', 'category' => 'Travel',
+            'employee_id' => $colleague->id, 'title' => 'Not mine', 'category' => 'Travel',
             'amount' => 50, 'expense_date' => now()->toDateString(),
         ])->assertForbidden();
 
         $this->postJson('/api/auth/leave/requests', [
-            'staff_id' => $colleague->id, 'leave_type_id' => $type->id,
+            'employee_id' => $colleague->id, 'leave_type_id' => $type->id,
             'start_date' => now()->toDateString(), 'end_date' => now()->addDay()->toDateString(),
         ])->assertForbidden();
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $colleague->id])->assertForbidden();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $colleague->id])->assertForbidden();
     }
 
     public function test_employees_can_still_act_for_themselves(): void
@@ -92,9 +92,9 @@ class RecordScopeTest extends TestCase
 
         Sanctum::actingAs($account);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $employee->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $employee->id])->assertOk();
         $this->postJson('/api/auth/expenses', [
-            'staff_id' => $employee->id, 'title' => 'Taxi', 'category' => 'Travel',
+            'employee_id' => $employee->id, 'title' => 'Taxi', 'category' => 'Travel',
             'amount' => 20, 'expense_date' => now()->toDateString(),
         ])->assertCreated();
     }
@@ -107,7 +107,7 @@ class RecordScopeTest extends TestCase
 
         Sanctum::actingAs($manager);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $colleague->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $colleague->id])->assertOk();
     }
 
     public function test_clients_see_only_tasks_they_belong_to(): void

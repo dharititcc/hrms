@@ -41,7 +41,7 @@ class AttendanceService
         // Fetched once so "outside every office" can be told apart from "no
         // offices defined": the first is suspicious, the second is not.
         $offices = AttendanceLocation::query()->where('owner_id', $employee->owner_id)->active()->get();
-        $location = $this->resolveLocation($offices, $mode, $attributes);
+        $location = $this->resolveLocation($offices, $mode, $attributes, $employee);
 
         $now = now();
 
@@ -157,7 +157,7 @@ class AttendanceService
      * Throws only when enforcement is on and the person claims to be in the
      * office but is not near one.
      */
-    private function resolveLocation(Collection $locations, WorkMode $mode, array $attributes): ?AttendanceLocation
+    private function resolveLocation(Collection $locations, WorkMode $mode, array $attributes, ?Employee $employee = null): ?AttendanceLocation
     {
         $latitude = $attributes['latitude'] ?? null;
         $longitude = $attributes['longitude'] ?? null;
@@ -168,7 +168,19 @@ class AttendanceService
             return null;
         }
 
-        $match = $locations->first(fn (AttendanceLocation $location) => $location->covers((float) $latitude, (float) $longitude));
+        /*
+        | Their own office is tried first. Two sites within each other's radius
+        | would otherwise be resolved by whichever the query happened to return
+        | first, and record somebody at a building they do not work in.
+        |
+        | Only a preference: being at a different office is still a valid
+        | check-in, which is what makes visiting another site work.
+        */
+        $covers = fn (AttendanceLocation $location) => $location->covers((float) $latitude, (float) $longitude);
+        $assigned = $employee?->attendance_location_id;
+
+        $match = $locations->first(fn (AttendanceLocation $location) => $location->id === $assigned && $covers($location))
+            ?? $locations->first($covers);
 
         if ($match === null && config('attendance.geofence.enforce')) {
             $nearest = $locations->sortBy(fn ($l) => $l->distanceTo((float) $latitude, (float) $longitude))->first();
