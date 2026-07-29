@@ -1,7 +1,7 @@
 "use client"
 
 import { History, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -23,6 +23,18 @@ const salarySchema = z.object({
 })
 
 type SalaryFormValues = z.infer<typeof salarySchema>
+
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(current: SalaryAssignment | null, fallbackCountry: string): SalaryFormValues {
+  return {
+    basic_salary: current ? String(Number(current.basic_salary)) : "",
+    country: current?.country ?? fallbackCountry,
+    salary_structure_id: current?.salary_structure_id ? String(current.salary_structure_id) : "",
+    // A revision always states its own start date, never inherits one.
+    effective_from: "",
+    revision_reason: "",
+  }
+}
 
 /**
  * An employee's salary, and the revisions behind it.
@@ -173,16 +185,16 @@ function SalaryForm({ employeeName, current, structures, countries, onCancel, on
 }) {
   const { toast } = useToast()
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<SalaryFormValues>({
+  const fallbackCountry = countries[0]?.value ?? "IN"
+
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<SalaryFormValues>({
     resolver: zodResolver(salarySchema),
-    defaultValues: {
-      basic_salary: current ? String(Number(current.basic_salary)) : "",
-      country: current?.country ?? countries[0]?.value ?? "IN",
-      salary_structure_id: current?.salary_structure_id ? String(current.salary_structure_id) : "",
-      effective_from: "",
-      revision_reason: "",
-    },
+    defaultValues: valuesFor(current, fallbackCountry),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this the current salary never appears in the revision form.
+  useEffect(() => { reset(valuesFor(current, fallbackCountry)) }, [reset, current, fallbackCountry])
 
   const country = useWatch({ control, name: "country" })
   // A structure carries its own country, so offering one from elsewhere would

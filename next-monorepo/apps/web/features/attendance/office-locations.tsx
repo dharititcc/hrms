@@ -1,7 +1,7 @@
 "use client"
 
 import { Building2, Crosshair, Edit3, MapPin, Plus, Trash2, X } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -121,6 +121,18 @@ export function OfficeLocations() {
   )
 }
 
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(location: AttendanceLocation | null, defaultRadius: number): LocationFormValues {
+  return {
+    name: location?.name ?? "",
+    address: location?.address ?? "",
+    latitude: location ? String(location.latitude) : "",
+    longitude: location ? String(location.longitude) : "",
+    radius_metres: String(location?.radius_metres ?? defaultRadius),
+    is_active: location?.is_active ?? true,
+  }
+}
+
 function OfficeDialog({ location, defaultRadius, onClose }: {
   location: AttendanceLocation | null
   defaultRadius: number
@@ -131,17 +143,14 @@ function OfficeDialog({ location, defaultRadius, onClose }: {
   const [locating, setLocating] = useState(false)
   const editingExisting = Boolean(location)
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<LocationFormValues>({
+  const { register, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<LocationFormValues>({
     resolver: zodResolver(locationSchema),
-    defaultValues: {
-      name: location?.name ?? "",
-      address: location?.address ?? "",
-      latitude: location ? String(location.latitude) : "",
-      longitude: location ? String(location.longitude) : "",
-      radius_metres: String(location?.radius_metres ?? defaultRadius),
-      is_active: location?.is_active ?? true,
-    },
+    defaultValues: valuesFor(location, defaultRadius),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this an edit dialog opens showing placeholders instead of values.
+  useEffect(() => { reset(valuesFor(location, defaultRadius)) }, [reset, location, defaultRadius])
 
   /** Typing coordinates by hand is error-prone, so offer the browser's fix. */
   const fillFromCurrentPosition = async () => {

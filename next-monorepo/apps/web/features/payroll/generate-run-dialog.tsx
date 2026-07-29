@@ -1,6 +1,7 @@
 "use client"
 
 import { X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -40,25 +41,37 @@ function lastMonth(): { start: string; end: string; title: string } {
   }
 }
 
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(period: { start: string; end: string; title: string }, fallbackCountry: string): RunFormValues {
+  return {
+    title: period.title,
+    country: fallbackCountry,
+    period_start: period.start,
+    period_end: period.end,
+    pay_date: "",
+    notes: "",
+  }
+}
+
 export function GenerateRunDialog({ onClose, onGenerated }: { onClose: () => void; onGenerated: (id: number) => void }) {
   const { generate } = usePayrollRunMutations()
   const { data: structureData } = useSalaryStructures()
   const { toast } = useToast()
-  const period = lastMonth()
+  // Held in state so the reset effect below has a stable dependency; recomputing
+  // it every render would loop.
+  const [period] = useState(lastMonth)
 
   const countries = structureData?.meta.countries ?? []
+  const fallbackCountry = countries[0]?.value ?? "IN"
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<RunFormValues>({
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<RunFormValues>({
     resolver: zodResolver(runSchema),
-    defaultValues: {
-      title: period.title,
-      country: countries[0]?.value ?? "IN",
-      period_start: period.start,
-      period_end: period.end,
-      pay_date: "",
-      notes: "",
-    },
+    defaultValues: valuesFor(period, fallbackCountry),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this the prefilled name and period appear as empty fields.
+  useEffect(() => { reset(valuesFor(period, fallbackCountry)) }, [reset, period, fallbackCountry])
 
   const country = useWatch({ control, name: "country" })
   const selected = countries.find((option) => option.value === country)

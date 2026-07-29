@@ -1,6 +1,7 @@
 "use client"
 
 import { X } from "lucide-react"
+import { useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -38,6 +39,21 @@ const componentSchema = z.object({
 
 type ComponentFormValues = z.infer<typeof componentSchema>
 
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(component: SalaryComponent | null): ComponentFormValues {
+  return {
+    code: component?.code ?? "",
+    name: component?.name ?? "",
+    type: component?.type ?? "earning",
+    calculation: component?.calculation ?? "fixed",
+    value: component ? String(Number(component.value)) : "0",
+    sort_order: String(component?.sort_order ?? 0),
+    is_taxable: component?.is_taxable ?? true,
+    is_statutory: component?.is_statutory ?? false,
+    is_active: component?.is_active ?? true,
+  }
+}
+
 export function ComponentDialog({ component, structureId, currencySymbol, onClose }: {
   component: SalaryComponent | null
   /** null means workspace-wide: applies to every payslip regardless of structure. */
@@ -49,20 +65,14 @@ export function ComponentDialog({ component, structureId, currencySymbol, onClos
   const { toast } = useToast()
   const editing = Boolean(component)
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<ComponentFormValues>({
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<ComponentFormValues>({
     resolver: zodResolver(componentSchema),
-    defaultValues: {
-      code: component?.code ?? "",
-      name: component?.name ?? "",
-      type: component?.type ?? "earning",
-      calculation: component?.calculation ?? "fixed",
-      value: component ? String(Number(component.value)) : "0",
-      sort_order: String(component?.sort_order ?? 0),
-      is_taxable: component?.is_taxable ?? true,
-      is_statutory: component?.is_statutory ?? false,
-      is_active: component?.is_active ?? true,
-    },
+    defaultValues: valuesFor(component),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this an edit dialog opens showing placeholders instead of values.
+  useEffect(() => { reset(valuesFor(component)) }, [reset, component])
 
   const type = useWatch({ control, name: "type" }) as SalaryComponentType
   const calculation = useWatch({ control, name: "calculation" }) as SalaryCalculation

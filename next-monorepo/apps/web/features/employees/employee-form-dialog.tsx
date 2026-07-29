@@ -1,6 +1,7 @@
 "use client"
 
 import { X } from "lucide-react"
+import { useEffect } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@workspace/ui/components/button"
@@ -15,6 +16,24 @@ import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Employee } from "@/types/employee"
 
+/**
+ * Module-level so the reset effect below has no changing dependency.
+ *
+ * The reset is what actually fills the inputs: react-aria's TextField does not
+ * pick up react-hook-form's defaultValues on its own, so passing them to
+ * useForm alone leaves an edit dialog showing placeholders.
+ */
+function valuesFor(employee?: Employee | null): EmployeeFormValues {
+  return {
+    name: employee?.name ?? "",
+    email: employee?.email ?? "",
+    phone: employee?.phone ?? "",
+    role: employee?.role ?? "employee",
+    status: employee?.status ?? "active",
+    attendance_location_id: employee?.attendance_location_id ? String(employee.attendance_location_id) : "",
+  }
+}
+
 export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee | null; onClose: () => void }) {
   const { toast } = useToast()
   const { can } = usePermissions()
@@ -27,19 +46,12 @@ export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee 
   const { data: officeData } = useAttendanceLocations(canSeeOffices)
   const offices = (officeData?.data ?? []).filter((office) => office.is_active)
 
-  // The caller keys this dialog by employee, so it remounts with fresh
-  // defaults rather than needing an effect to reset them.
-  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<EmployeeFormValues>({
+  const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: {
-      name: employee?.name ?? "",
-      email: employee?.email ?? "",
-      phone: employee?.phone ?? "",
-      role: employee?.role ?? "employee",
-      status: employee?.status ?? "active",
-      attendance_location_id: employee?.attendance_location_id ? String(employee.attendance_location_id) : "",
-    },
+    defaultValues: valuesFor(employee),
   })
+
+  useEffect(() => { reset(valuesFor(employee)) }, [reset, employee])
 
   const onSubmit = async (values: EmployeeFormValues) => {
     const input = {

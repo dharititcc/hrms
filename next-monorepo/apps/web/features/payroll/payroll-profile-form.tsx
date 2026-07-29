@@ -1,6 +1,7 @@
 "use client"
 
 import { AlertTriangle, Landmark, ShieldCheck } from "lucide-react"
+import { useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -26,6 +27,23 @@ const profileSchema = z.object({
 })
 
 type ProfileFormValues = z.infer<typeof profileSchema>
+
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(profile: PayrollProfile | null, fallbackCountry: string): ProfileFormValues {
+  return {
+    country: profile?.country ?? fallbackCountry,
+    bank_name: profile?.bank_name ?? "",
+    account_holder_name: profile?.account_holder_name ?? "",
+    bank_code: profile?.bank_code ?? "",
+    swift_code: profile?.swift_code ?? "",
+    tax_regime: profile?.tax_regime ?? "",
+    tax_notes: profile?.tax_notes ?? "",
+    // Never prefilled: the server only ever sends these back masked.
+    account_number: "",
+    iban: "",
+    tax_identifier: "",
+  }
+}
 
 /**
  * Bank and tax details.
@@ -78,22 +96,18 @@ function Form({ profile, employeeName, countries, canEdit, onSave, saving }: {
   onSave: (input: PayrollProfileInput) => Promise<void>
   saving: boolean
 }) {
-  const { register, handleSubmit, control, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProfileFormValues>({
+  // A primitive rather than the countries array, which is rebuilt on every
+  // render and would send the effect below into a loop.
+  const fallbackCountry = countries[0]?.value ?? "IN"
+
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting, dirtyFields } } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      country: profile?.country ?? countries[0]?.value ?? "IN",
-      bank_name: profile?.bank_name ?? "",
-      account_holder_name: profile?.account_holder_name ?? "",
-      bank_code: profile?.bank_code ?? "",
-      swift_code: profile?.swift_code ?? "",
-      tax_regime: profile?.tax_regime ?? "",
-      tax_notes: profile?.tax_notes ?? "",
-      // Never prefilled: the server does not send them back.
-      account_number: "",
-      iban: "",
-      tax_identifier: "",
-    },
+    defaultValues: valuesFor(profile, fallbackCountry),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this the stored details never appear in the fields.
+  useEffect(() => { reset(valuesFor(profile, fallbackCountry)) }, [reset, profile, fallbackCountry])
 
   const country = useWatch({ control, name: "country" })
   const selected = countries.find((option) => option.value === country)

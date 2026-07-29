@@ -1,6 +1,7 @@
 "use client"
 
 import { X } from "lucide-react"
+import { useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -21,6 +22,18 @@ const structureSchema = z.object({
 
 type StructureFormValues = z.infer<typeof structureSchema>
 
+/** Module-level, so the reset effect below has no changing dependency. */
+function valuesFor(structure: SalaryStructure | null, fallbackCountry: string): StructureFormValues {
+  return {
+    name: structure?.name ?? "",
+    description: structure?.description ?? "",
+    country: structure?.country ?? fallbackCountry,
+    is_active: structure?.is_active ?? true,
+    // Only offered on create, so never carried over from an existing one.
+    seed_statutory: false,
+  }
+}
+
 export function StructureDialog({ structure, countries, onClose }: {
   structure: SalaryStructure | null
   countries: PayrollCountryOption[]
@@ -30,16 +43,16 @@ export function StructureDialog({ structure, countries, onClose }: {
   const { toast } = useToast()
   const editing = Boolean(structure)
 
-  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<StructureFormValues>({
+  const fallbackCountry = countries[0]?.value ?? "IN"
+
+  const { register, handleSubmit, control, reset, formState: { errors, isSubmitting } } = useForm<StructureFormValues>({
     resolver: zodResolver(structureSchema),
-    defaultValues: {
-      name: structure?.name ?? "",
-      description: structure?.description ?? "",
-      country: structure?.country ?? countries[0]?.value ?? "IN",
-      is_active: structure?.is_active ?? true,
-      seed_statutory: false,
-    },
+    defaultValues: valuesFor(structure, fallbackCountry),
   })
+
+  // react-aria's TextField does not read react-hook-form's defaultValues, so
+  // without this an edit dialog opens showing placeholders instead of values.
+  useEffect(() => { reset(valuesFor(structure, fallbackCountry)) }, [reset, structure, fallbackCountry])
 
   const country = useWatch({ control, name: "country" })
   const selected = countries.find((option) => option.value === country)
