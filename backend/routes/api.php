@@ -16,7 +16,9 @@ use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\PayrollRunController;
 use App\Http\Controllers\API\PermissionController;
+use App\Http\Controllers\API\SalaryAssignmentController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\TaskChecklistController;
@@ -77,6 +79,18 @@ Route::prefix('auth')->group(function () {
         // run from salary assignments, not by posting figures directly.
         Route::get('/payroll', [PayrollController::class, 'index'])->middleware('can:payroll.view');
         Route::get('/payroll/{slip}', [PayrollController::class, 'show'])->middleware('can:payroll.view');
+
+        // An employee's salary and its revision history.
+        Route::get('/staff/{staff}/salary', [SalaryAssignmentController::class, 'current'])->middleware('can:payroll.view');
+        Route::get('/staff/{staff}/salary/history', [SalaryAssignmentController::class, 'index'])->middleware('can:payroll.view');
+        Route::post('/staff/{staff}/salary', [SalaryAssignmentController::class, 'store'])->middleware('can:payroll.create');
+        Route::patch('/staff/{staff}/salary/end', [SalaryAssignmentController::class, 'end'])->middleware('can:payroll.edit');
+
+        Route::get('/payroll-runs', [PayrollRunController::class, 'index'])->middleware('can:payroll.view');
+        Route::get('/payroll-runs/{run}', [PayrollRunController::class, 'show'])->middleware('can:payroll.view');
+        Route::post('/payroll-runs', [PayrollRunController::class, 'store'])->middleware('can:payroll.generate');
+        Route::post('/payroll-runs/{run}/regenerate', [PayrollRunController::class, 'regenerate'])->middleware('can:payroll.generate');
+        Route::delete('/payroll-runs/{run}', [PayrollRunController::class, 'destroy'])->middleware('can:payroll.delete');
         Route::get('/expenses', [ExpenseController::class, 'index'])->middleware('can:expenses.view');
         Route::post('/expenses', [ExpenseController::class, 'store'])->middleware('can:expenses.create');
         Route::patch('/expenses/{expense}/status', [ExpenseController::class, 'updateStatus'])->middleware('can:expenses.approve');
