@@ -1,0 +1,81 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  API_URL: https://api.hrms.itcc.net.au/api
+  BACKEND_PATH: hrms-app/backend
+  NODEAPP_PATH: nodeapp
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: next-monorepo/package-lock.json
+
+      - name: Install deps
+        working-directory: next-monorepo
+        run: npm ci
+
+      - name: Build frontend (standalone)
+        working-directory: next-monorepo/apps/web
+        env:
+          NEXT_PUBLIC_API_URL: ${{ env.API_URL }}
+        run: npx next build
+
+      - name: Assemble standalone bundle
+        working-directory: next-monorepo/apps/web
+        run: |
+          cp -r .next/static .next/standalone/apps/web/.next/static
+          if [ -d public ]; then cp -r public .next/standalone/apps/web/public; fi
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.SSH_PORT }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy frontend
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }}" \
+            next-monorepo/apps/web/.next/standalone/ \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.NODEAPP_PATH }}/"
+
+      - name: Deploy backend
+        run: |
+          rsync -az --delete \
+            --exclude '.env' --exclude '.git' --exclude 'node_modules' \
+            --exclude 'vendor' --exclude 'storage' --exclude 'public/storage' \
+            -e "ssh -i ~/.ssh/id_ed25519 -p ${{ secrets.SSH_PORT }}" \
+            backend/ \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.BACKEND_PATH }}/"
+
+      - name: Post-deploy (migrate, cache, restart)
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.SSH_PORT }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s << 'REMOTE'
+          set -e
+          cd ~/hrms-app/backend
+          composer install --no-dev --optimize-autoloader --no-interaction
+          php artisan migrate --force
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan storage:link 2>/dev/null || true
+          mkdir -p ~/nodeapp/tmp && touch ~/nodeapp/tmp/restart.txt
+          REMOTE
