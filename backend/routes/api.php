@@ -20,6 +20,8 @@ use App\Http\Controllers\API\NotificationController;
 use App\Http\Controllers\API\PayrollRunController;
 use App\Http\Controllers\API\PermissionController;
 use App\Http\Controllers\API\SalaryAssignmentController;
+use App\Http\Controllers\API\SalaryComponentController;
+use App\Http\Controllers\API\SalaryStructureController;
 use App\Http\Controllers\API\StaffInvitationController;
 use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\TaskChecklistController;
@@ -87,6 +89,21 @@ Route::prefix('auth')->group(function () {
         // run from salary assignments, not by posting figures directly.
         Route::get('/payroll', [PayrollController::class, 'index'])->middleware('can:payroll.view');
         Route::get('/payroll/{slip}', [PayrollController::class, 'show'])->middleware('can:payroll.view');
+
+        /*
+        | Salary templates and the lines that make them up. Assignments point at
+        | a structure, so these have to exist before anyone can be paid.
+        */
+        Route::get('/salary-structures', [SalaryStructureController::class, 'index'])->middleware('can:payroll.view-all');
+        Route::get('/salary-structures/{structure}', [SalaryStructureController::class, 'show'])->middleware('can:payroll.view-all');
+        Route::post('/salary-structures', [SalaryStructureController::class, 'store'])->middleware('can:payroll.create');
+        Route::put('/salary-structures/{structure}', [SalaryStructureController::class, 'update'])->middleware('can:payroll.edit');
+        Route::delete('/salary-structures/{structure}', [SalaryStructureController::class, 'destroy'])->middleware('can:payroll.delete');
+
+        Route::get('/salary-components', [SalaryComponentController::class, 'index'])->middleware('can:payroll.view-all');
+        Route::post('/salary-components', [SalaryComponentController::class, 'store'])->middleware('can:payroll.create');
+        Route::put('/salary-components/{component}', [SalaryComponentController::class, 'update'])->middleware('can:payroll.edit');
+        Route::delete('/salary-components/{component}', [SalaryComponentController::class, 'destroy'])->middleware('can:payroll.delete');
 
         // An employee's salary and its revision history.
         Route::get('/staff/{staff}/salary', [SalaryAssignmentController::class, 'current'])->middleware('can:payroll.view');

@@ -1,35 +1,59 @@
 "use client"
 
 import { DollarSign, Info } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { SalaryStructures } from "@/features/payroll/salary-structures"
 import { usePayroll } from "@/hooks/use-phase-three"
+import { usePermissions } from "@/hooks/use-permissions"
 
 /**
- * Salary slips produced by payroll runs.
+ * Salary slips produced by payroll runs, and the configuration they are built
+ * from.
  *
- * Read-only. The previous form posted figures straight into a flat table,
- * which left no salary history and no breakdown. Slips now come from an
- * employee's salary assignment, so the create path returns with payroll run
- * generation rather than being restored here.
+ * The slip list is read-only: slips come from an employee's salary assignment
+ * rather than from figures typed in here, so the create path is run generation.
  */
 export function PayrollModule() {
-  const { data, isLoading, isError, refetch } = usePayroll()
-  const slips = data?.data ?? []
+  const { can } = usePermissions()
+  // Structures describe the whole workspace's pay design, so they sit behind
+  // view-all. An employee sees only their own slips and no tabs at all.
+  const seesConfiguration = can("payroll.view-all")
+  const [tab, setTab] = useState<"slips" | "structures">("slips")
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
       <div>
         <p className="text-sm font-medium text-muted-foreground">Finance</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Payroll</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Salary slips issued by payroll runs.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {seesConfiguration ? "Salary slips, and the structures they are calculated from." : "Your salary slips."}
+        </p>
       </div>
 
+      {seesConfiguration && (
+        <div className="flex gap-2">
+          <Button variant={tab === "slips" ? "secondary" : "outline"} onPress={() => setTab("slips")}>Salary slips</Button>
+          <Button variant={tab === "structures" ? "secondary" : "outline"} onPress={() => setTab("structures")}>Structures</Button>
+        </div>
+      )}
+
+      {seesConfiguration && tab === "structures" ? <SalaryStructures /> : <SlipList />}
+    </div>
+  )
+}
+
+function SlipList() {
+  const { data, isLoading, isError, refetch } = usePayroll()
+  const slips = data?.data ?? []
+
+  return (
+    <>
       <div className="flex items-start gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm">
         <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="text-muted-foreground">
-          Payroll now runs from each employee&rsquo;s salary structure, so slips carry a full earnings and
-          deductions breakdown and a complete salary history. Generating a run is not built yet, so this
-          list is read-only for now.
+          Slips carry a full earnings and deductions breakdown drawn from the employee&rsquo;s salary structure.
+          Generating a run is not built yet, so this list is read-only for now.
         </p>
       </div>
 
@@ -80,6 +104,6 @@ export function PayrollModule() {
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
