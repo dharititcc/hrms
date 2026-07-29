@@ -1,0 +1,179 @@
+import { apiClient } from "@/lib/api-client"
+import type {
+  GeneratePayrollInput, PayrollRun, PayrollRunListResponse,
+  PayrollProfile, PayrollProfileInput, PayslipDeliveryResult, RecordPaymentInput,
+  SalaryAssignment, SalaryAssignmentInput, SalaryPayment, SalaryPaymentListResponse,
+  SalaryComponent, SalaryComponentInput, SalaryComponentListResponse,
+  SalaryStructure, SalaryStructureInput, SalaryStructureListResponse,
+} from "@/types/payroll"
+
+/** Payroll configuration: the templates and lines a payslip is built from. */
+export const payrollService = {
+  async structures() {
+    const { data } = await apiClient.get<SalaryStructureListResponse>("/auth/salary-structures")
+    return data
+  },
+  async structure(id: number) {
+    const { data } = await apiClient.get<{ data: SalaryStructure }>(`/auth/salary-structures/${id}`)
+    return data.data
+  },
+  async createStructure(input: SalaryStructureInput) {
+    const { data } = await apiClient.post<{ data: SalaryStructure }>("/auth/salary-structures", input)
+    return data.data
+  },
+  async updateStructure(id: number, input: SalaryStructureInput) {
+    const { data } = await apiClient.put<{ data: SalaryStructure }>(`/auth/salary-structures/${id}`, input)
+    return data.data
+  },
+  async removeStructure(id: number) {
+    await apiClient.delete(`/auth/salary-structures/${id}`)
+  },
+
+  async components(filters: { salary_structure_id?: number; global_only?: boolean } = {}) {
+    const { data } = await apiClient.get<SalaryComponentListResponse>("/auth/salary-components", { params: filters })
+    return data
+  },
+  async createComponent(input: SalaryComponentInput) {
+    const { data } = await apiClient.post<{ data: SalaryComponent }>("/auth/salary-components", input)
+    return data.data
+  },
+  async updateComponent(id: number, input: SalaryComponentInput) {
+    const { data } = await apiClient.put<{ data: SalaryComponent }>(`/auth/salary-components/${id}`, input)
+    return data.data
+  },
+  async removeComponent(id: number) {
+    await apiClient.delete(`/auth/salary-components/${id}`)
+  },
+
+  // An employee's salary, and the revisions behind it.
+  async currentSalary(employeeId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment | null }>(`/auth/employees/${employeeId}/salary`)
+    return data.data
+  },
+  async salaryHistory(employeeId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment[] }>(`/auth/employees/${employeeId}/salary/history`)
+    return data.data
+  },
+  async assignSalary(employeeId: number, input: SalaryAssignmentInput) {
+    const { data } = await apiClient.post<{ data: SalaryAssignment }>(`/auth/employees/${employeeId}/salary`, input)
+    return data.data
+  },
+  // Where the pay goes, and under what tax identity.
+  async profile(employeeId: number) {
+    const { data } = await apiClient.get<{ data: PayrollProfile | null }>(`/auth/employees/${employeeId}/payroll-profile`)
+    return data.data
+  },
+  async saveProfile(employeeId: number, input: PayrollProfileInput) {
+    const { data } = await apiClient.put<{ data: PayrollProfile }>(`/auth/employees/${employeeId}/payroll-profile`, input)
+    return data.data
+  },
+  async removeProfile(employeeId: number) {
+    await apiClient.delete(`/auth/employees/${employeeId}/payroll-profile`)
+  },
+
+  async endSalary(employeeId: number, effectiveTo: string) {
+    const { data } = await apiClient.patch<{ data: SalaryAssignment }>(`/auth/employees/${employeeId}/salary/end`, { effective_to: effectiveTo })
+    return data.data
+  },
+
+  // Payroll runs and the slips they produce.
+  async runs(page = 1) {
+    const { data } = await apiClient.get<PayrollRunListResponse>("/auth/payroll-runs", { params: { page } })
+    return data
+  },
+  async run(id: number) {
+    const { data } = await apiClient.get<{ data: PayrollRun }>(`/auth/payroll-runs/${id}`)
+    return data.data
+  },
+  async generateRun(input: GeneratePayrollInput) {
+    const { data } = await apiClient.post<{ data: PayrollRun }>("/auth/payroll-runs", input)
+    return data.data
+  },
+  async regenerateRun(id: number, input: GeneratePayrollInput) {
+    const { data } = await apiClient.post<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/regenerate`, input)
+    return data.data
+  },
+  async removeRun(id: number) {
+    await apiClient.delete(`/auth/payroll-runs/${id}`)
+  },
+
+  // draft -> pending approval -> approved -> paid.
+  async submitRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/submit`)
+    return data.data
+  },
+  async approveRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/approve`)
+    return data.data
+  },
+  async cancelRun(id: number) {
+    const { data } = await apiClient.patch<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/cancel`)
+    return data.data
+  },
+
+  async payments(slipId: number) {
+    const { data } = await apiClient.get<SalaryPaymentListResponse>(`/auth/salary-slips/${slipId}/payments`)
+    return data
+  },
+  async recordPayment(slipId: number, input: RecordPaymentInput) {
+    const { data } = await apiClient.post<{ data: SalaryPayment }>(`/auth/salary-slips/${slipId}/payments`, input)
+    return data.data
+  },
+  async reversePayment(id: number) {
+    await apiClient.delete(`/auth/salary-payments/${id}`)
+  },
+
+  /**
+   * The payslip PDF.
+   *
+   * Fetched as a blob rather than linked to directly: the API authenticates
+   * with a bearer token from an interceptor, and a plain anchor would arrive
+   * without it and be rejected.
+   */
+  async downloadPayslip(slipId: number, filename: string) {
+    const response = await apiClient.get<Blob>(`/auth/salary-slips/${slipId}/download`, { responseType: "blob" })
+    const url = URL.createObjectURL(response.data)
+
+    try {
+      const anchor = document.createElement("a")
+      anchor.href = url
+      anchor.download = filename
+      anchor.click()
+    } finally {
+      // Revoking immediately is safe: the click has already handed the blob to
+      // the browser's download manager.
+      URL.revokeObjectURL(url)
+    }
+  },
+
+  async emailRun(runId: number, resend = false) {
+    const { data } = await apiClient.post<{ message: string; meta: PayslipDeliveryResult }>(
+      `/auth/payroll-runs/${runId}/email`, { resend },
+    )
+    return data
+  },
+  async emailSlip(slipId: number) {
+    const { data } = await apiClient.post<{ message: string }>(`/auth/salary-slips/${slipId}/email`)
+    return data
+  },
+}
+
+/**
+ * Lines whose amount is entered per payslip rather than derived.
+ *
+ * Progressive taxes land here, and they generate as zero until someone fills
+ * them in — so surfacing them is what stops a run silently under-deducting.
+ */
+export function manualLines(slip: { lines?: { code: string; name: string; amount: string }[] }, manualCodes: Set<string>) {
+  return (slip.lines ?? []).filter((line) => manualCodes.has(line.code))
+}
+
+/** Percentages read as rates; fixed amounts read as money. */
+export function formatComponentValue(component: SalaryComponent, currencySymbol: string): string {
+  const value = Number(component.value)
+
+  if (component.calculation === "manual") return "Per payslip"
+  if (component.calculation === "fixed") return `${currencySymbol}${value.toFixed(2)}`
+
+  return `${value}%`
+}

@@ -199,11 +199,53 @@ GET      /api/auth/reports/summary
 
 Advanced follow-ups include review-cycle automation, file attachments, tax integrations, PDF reports, and notification delivery.
 
+## Project management
+
+Dashboard modules:
+
+```text
+/dashboard/projects
+/dashboard/projects/{project}
+```
+
+Project management includes:
+
+- Project registry with client, description, status, timeline, and budget
+- Team assignment from active staff, scoped to the workspace owner
+- Kanban task board with To do, In progress, and Done columns
+- Drag-and-drop task moves, with keyboard-accessible move controls
+- Task priority, assignee, due date, and description
+- Rolled-up task progress per project
+- Searchable and status-filtered project listing with pagination
+
+Project API endpoints:
+
+```text
+GET    /api/auth/projects
+POST   /api/auth/projects
+GET    /api/auth/projects/{project}
+PUT    /api/auth/projects/{project}
+DELETE /api/auth/projects/{project}
+GET    /api/auth/projects/{project}/tasks
+POST   /api/auth/projects/{project}/tasks
+PUT    /api/auth/tasks/{task}
+PATCH  /api/auth/tasks/{task}/status
+DELETE /api/auth/tasks/{task}
+```
+
 ## Frontend routes
 
 ```text
 /dashboard
 /dashboard/staff
+/dashboard/attendance
+/dashboard/leave
+/dashboard/payroll
+/dashboard/expenses
+/dashboard/projects
+/dashboard/projects/{project}
+/dashboard/recruitment
+/dashboard/operations
 /dashboard/settings
 ```
 

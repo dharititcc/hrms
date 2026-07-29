@@ -65,7 +65,16 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    /*
+    | Attendance records a wall-clock time — "checked in at 09:12" — and
+    | compares it against a shift start like 09:00. Both are read from this
+    | timezone, so leaving it as UTC meant somebody in IST checking in at 14:05
+    | was recorded at 08:35 and judged against the wrong clock. Near midnight it
+    | also put the check-in on the wrong work_date.
+    |
+    | Set APP_TIMEZONE to wherever the people using this actually work.
+    */
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
