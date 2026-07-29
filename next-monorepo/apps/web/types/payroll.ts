@@ -78,6 +78,137 @@ export type SalaryComponentInput = {
   is_active?: boolean
 }
 
+export type PayrollRunStatus = "draft" | "pending_approval" | "approved" | "paid" | "cancelled"
+
+export type SalarySlipLine = {
+  type: SalaryComponentType
+  code: string
+  name: string
+  amount: string
+  is_statutory: boolean
+}
+
+/** Frozen figures: nothing reads back through the structure once issued. */
+export type SalarySlip = {
+  id: number
+  slip_number: string
+  payroll_run_id: number
+  period?: string | null
+  period_start?: string | null
+  period_end?: string | null
+  staff_id: number
+  staff_name?: string | null
+  country: string
+  currency_code: string
+  currency_symbol: string
+  basic_salary: string
+  total_earnings: string
+  total_deductions: string
+  employer_contributions: string
+  gross_salary: string
+  net_salary: string
+  paid_amount: string
+  outstanding: number
+  status: string
+  lines?: SalarySlipLine[]
+  created_at?: string
+}
+
+export type PayrollRun = {
+  id: number
+  title: string
+  country: string
+  currency_code: string
+  currency_symbol: string
+  period_start: string
+  period_end: string
+  pay_date: string | null
+  status: PayrollRunStatus
+  /** Draft runs can be recalculated; approved ones are committed. */
+  is_editable: boolean
+  is_locked: boolean
+  slip_count: number
+  total_earnings: string
+  total_deductions: string
+  total_net: string
+  generated_by: number | null
+  approved_by: number | null
+  approved_at: string | null
+  notes: string | null
+  slips?: SalarySlip[]
+  created_at: string
+}
+
+export type PayrollRunListResponse = {
+  data: PayrollRun[]
+  meta: { current_page: number; last_page: number; per_page: number; total: number }
+}
+
+export type GeneratePayrollInput = {
+  title: string
+  country: string
+  period_start: string
+  period_end: string
+  pay_date?: string | null
+  notes?: string | null
+  /** staff id => component code => amount, for progressive taxes. */
+  manual_amounts?: Record<number, Record<string, number>>
+}
+
+export type SalaryAssignmentStatus = "active" | "superseded" | "ended"
+
+export type SalaryAssignment = {
+  id: number
+  staff_id: number
+  staff_name?: string | null
+  salary_structure_id: number | null
+  structure_name?: string | null
+  basic_salary: string
+  currency_code: string
+  currency_symbol: string
+  country: string
+  effective_from: string
+  effective_to: string | null
+  status: SalaryAssignmentStatus
+  revision_reason: string | null
+  supersedes_id: number | null
+  component_values?: { salary_component_id: number; code?: string | null; name?: string | null; value: string }[]
+  created_at: string
+}
+
+export type SalaryAssignmentInput = {
+  basic_salary: number
+  country: string
+  currency_code?: string | null
+  effective_from: string
+  revision_reason?: string | null
+  salary_structure_id?: number | null
+  /** Per-employee overrides, keyed by component id. */
+  component_values?: Record<number, number>
+}
+
+export const payrollRunStatusLabels: Record<PayrollRunStatus, string> = {
+  draft: "Draft",
+  pending_approval: "Pending approval",
+  approved: "Approved",
+  paid: "Paid",
+  cancelled: "Cancelled",
+}
+
+export const payrollRunStatusStyles: Record<PayrollRunStatus, string> = {
+  draft: "bg-muted text-muted-foreground",
+  pending_approval: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  approved: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  paid: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  cancelled: "bg-destructive/10 text-destructive",
+}
+
+export const salaryAssignmentStatusLabels: Record<SalaryAssignmentStatus, string> = {
+  active: "Current",
+  superseded: "Superseded",
+  ended: "Ended",
+}
+
 export const salaryComponentTypeLabels: Record<SalaryComponentType, string> = {
   earning: "Earning",
   deduction: "Deduction",

@@ -3,6 +3,7 @@
 import { DollarSign, Info } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { PayrollRuns } from "@/features/payroll/payroll-runs"
 import { SalaryStructures } from "@/features/payroll/salary-structures"
 import { usePayroll } from "@/hooks/use-phase-three"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -19,7 +20,7 @@ export function PayrollModule() {
   // Structures describe the whole workspace's pay design, so they sit behind
   // view-all. An employee sees only their own slips and no tabs at all.
   const seesConfiguration = can("payroll.view-all")
-  const [tab, setTab] = useState<"slips" | "structures">("slips")
+  const [tab, setTab] = useState<"slips" | "runs" | "structures">("slips")
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
@@ -34,11 +35,12 @@ export function PayrollModule() {
       {seesConfiguration && (
         <div className="flex gap-2">
           <Button variant={tab === "slips" ? "secondary" : "outline"} onPress={() => setTab("slips")}>Salary slips</Button>
+          <Button variant={tab === "runs" ? "secondary" : "outline"} onPress={() => setTab("runs")}>Runs</Button>
           <Button variant={tab === "structures" ? "secondary" : "outline"} onPress={() => setTab("structures")}>Structures</Button>
         </div>
       )}
 
-      {seesConfiguration && tab === "structures" ? <SalaryStructures /> : <SlipList />}
+      {!seesConfiguration || tab === "slips" ? <SlipList /> : tab === "runs" ? <PayrollRuns /> : <SalaryStructures />}
     </div>
   )
 }
@@ -52,8 +54,8 @@ function SlipList() {
       <div className="flex items-start gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm">
         <Info className="mt-0.5 size-4 shrink-0 text-sky-600 dark:text-sky-400" />
         <p className="text-muted-foreground">
-          Slips carry a full earnings and deductions breakdown drawn from the employee&rsquo;s salary structure.
-          Generating a run is not built yet, so this list is read-only for now.
+          Slips are frozen when a run is generated, so correcting a structure afterwards never rewrites one already issued.
+          To produce new slips, generate a run.
         </p>
       </div>
 

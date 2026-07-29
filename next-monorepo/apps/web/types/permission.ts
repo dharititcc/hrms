@@ -10,6 +10,12 @@ export type PermissionAction =
   | "view-all"
   | "create" | "edit" | "delete"
   | "assign" | "approve" | "comment" | "upload" | "export"
+  /** Run a process that produces records, such as a monthly payroll. */
+  | "generate"
+  /** Record money actually leaving the business. */
+  | "pay"
+  /** Retrieve a generated document, such as a payslip PDF. */
+  | "download"
 
 /** Mirrors the server's module.action strings, so typos fail to compile. */
 export type Permission = `${PermissionModule}.${PermissionAction}`

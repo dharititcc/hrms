@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
+  GeneratePayrollInput, PayrollRun, PayrollRunListResponse,
+  SalaryAssignment, SalaryAssignmentInput,
   SalaryComponent, SalaryComponentInput, SalaryComponentListResponse,
   SalaryStructure, SalaryStructureInput, SalaryStructureListResponse,
 } from "@/types/payroll"
@@ -41,6 +43,55 @@ export const payrollService = {
   async removeComponent(id: number) {
     await apiClient.delete(`/auth/salary-components/${id}`)
   },
+
+  // An employee's salary, and the revisions behind it.
+  async currentSalary(staffId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment | null }>(`/auth/staff/${staffId}/salary`)
+    return data.data
+  },
+  async salaryHistory(staffId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment[] }>(`/auth/staff/${staffId}/salary/history`)
+    return data.data
+  },
+  async assignSalary(staffId: number, input: SalaryAssignmentInput) {
+    const { data } = await apiClient.post<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary`, input)
+    return data.data
+  },
+  async endSalary(staffId: number, effectiveTo: string) {
+    const { data } = await apiClient.patch<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary/end`, { effective_to: effectiveTo })
+    return data.data
+  },
+
+  // Payroll runs and the slips they produce.
+  async runs(page = 1) {
+    const { data } = await apiClient.get<PayrollRunListResponse>("/auth/payroll-runs", { params: { page } })
+    return data
+  },
+  async run(id: number) {
+    const { data } = await apiClient.get<{ data: PayrollRun }>(`/auth/payroll-runs/${id}`)
+    return data.data
+  },
+  async generateRun(input: GeneratePayrollInput) {
+    const { data } = await apiClient.post<{ data: PayrollRun }>("/auth/payroll-runs", input)
+    return data.data
+  },
+  async regenerateRun(id: number, input: GeneratePayrollInput) {
+    const { data } = await apiClient.post<{ data: PayrollRun }>(`/auth/payroll-runs/${id}/regenerate`, input)
+    return data.data
+  },
+  async removeRun(id: number) {
+    await apiClient.delete(`/auth/payroll-runs/${id}`)
+  },
+}
+
+/**
+ * Lines whose amount is entered per payslip rather than derived.
+ *
+ * Progressive taxes land here, and they generate as zero until someone fills
+ * them in — so surfacing them is what stops a run silently under-deducting.
+ */
+export function manualLines(slip: { lines?: { code: string; name: string; amount: string }[] }, manualCodes: Set<string>) {
+  return (slip.lines ?? []).filter((line) => manualCodes.has(line.code))
 }
 
 /** Percentages read as rates; fixed amounts read as money. */
