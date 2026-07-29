@@ -1,4 +1,4 @@
-import type { Staff } from "@/types/staff"
+import type { Employee } from "@/types/employee"
 
 export type ProjectStatus = "planning" | "active" | "on_hold" | "completed" | "cancelled"
 export type TaskStatus = "pending" | "in_progress" | "review" | "completed" | "cancelled" | "on_hold"
@@ -19,7 +19,7 @@ export type Project = {
   end_date: string | null
   /** Laravel casts decimals to strings, e.g. "15000.00". */
   budget: string | null
-  members?: Staff[]
+  members?: Employee[]
   tasks_total?: number
   tasks_done?: number
   created_at: string

@@ -95,11 +95,11 @@ export function OverviewModule() {
         )}
       </div>
 
-      {(attendance?.active_staff !== undefined || leave || payroll) && (
+      {(attendance?.active_employees !== undefined || leave || payroll) && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Only for someone who can see the team; an employee's own day is
               already in the quick actions above. */}
-          {attendance?.active_staff !== undefined && (
+          {attendance?.active_employees !== undefined && (
             <Panel title="Today" href="/dashboard/attendance">
               <div className="grid gap-3">
                 <Metric label="Present" value={attendance.present_today} loading={false} />
@@ -124,7 +124,7 @@ export function OverviewModule() {
                 <p className="text-sm text-muted-foreground">
                   {leave.awaiting_approval === undefined
                     ? "No leave types are set up yet."
-                    : "Balances appear once you have a staff record and leave types exist."}
+                    : "Balances appear once you have a employee record and leave types exist."}
                 </p>
               ) : (
                 <ul className="grid gap-3">
@@ -192,17 +192,17 @@ export function OverviewModule() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {people && (
-          <Panel title="People" href="/dashboard/staff">
+          <Panel title="People" href="/dashboard/employees">
             <div className="grid gap-3">
-              <Metric label="Staff" value={people.staff} loading={false} />
+              <Metric label="Employee" value={people.employees} loading={false} />
               <Metric label="Active" value={people.active} loading={false} />
               <Metric label="With accounts" value={people.with_accounts} loading={false} />
             </div>
-            {/* Staff without accounts cannot be assigned tasks, which is easy to miss. */}
-            {people.staff > people.with_accounts && (
+            {/* Employee without accounts cannot be assigned tasks, which is easy to miss. */}
+            {people.employees > people.with_accounts && (
               <p className="mt-3 text-xs text-muted-foreground">
-                {people.staff - people.with_accounts} without an account cannot be assigned tasks.{" "}
-                <Link href="/dashboard/staff" className="text-primary hover:underline">Invite them</Link>.
+                {people.employees - people.with_accounts} without an account cannot be assigned tasks.{" "}
+                <Link href="/dashboard/employees" className="text-primary hover:underline">Invite them</Link>.
               </p>
             )}
           </Panel>

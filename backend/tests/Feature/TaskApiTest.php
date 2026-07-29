@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Project;
-use App\Models\Staff;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -77,20 +77,20 @@ class TaskApiTest extends TestCase
             ->assertJsonValidationErrors('assignee_ids.0');
 
         // An invited staff member is assignable.
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        $this->postJson("/api/auth/projects/{$project->id}/tasks", $this->payload(['assignee_ids' => [$staff->refresh()->user_id]]))
+        $this->postJson("/api/auth/projects/{$project->id}/tasks", $this->payload(['assignee_ids' => [$employee->refresh()->user_id]]))
             ->assertCreated()
-            ->assertJsonPath('data.assignees.0.id', $staff->user_id);
+            ->assertJsonPath('data.assignees.0.id', $employee->user_id);
     }
 
     public function test_workspace_users_lists_the_owner_and_invited_staff_only(): void
     {
         $owner = User::factory()->create();
-        $invited = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        Staff::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($invited);
+        $invited = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($invited);
 
         Sanctum::actingAs($owner);
 

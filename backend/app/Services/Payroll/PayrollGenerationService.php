@@ -8,7 +8,7 @@ use App\Models\EmployeeSalaryAssignment;
 use App\Models\PayrollRun;
 use App\Models\SalarySlip;
 use App\Models\SalarySlipLine;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
 use App\Support\Payroll\SalaryBreakdown;
 use Illuminate\Support\Carbon;
@@ -28,7 +28,7 @@ class PayrollGenerationService
     public function __construct(private readonly SalaryCalculator $calculator) {}
 
     /**
-     * @param  array<int, array<string, float>>  $manualAmounts  staff id => component code => amount
+     * @param  array<int, array<string, float>>  $manualAmounts  employee id => component code => amount
      */
     public function generate(User $author, array $attributes, array $manualAmounts = []): PayrollRun
     {
@@ -94,7 +94,7 @@ class PayrollGenerationService
             $this->rollUpTotals($run);
         });
 
-        return $run->refresh()->load(['slips.staff', 'slips.lines']);
+        return $run->refresh()->load(['slips.employee', 'slips.lines']);
     }
 
     /**
@@ -108,14 +108,14 @@ class PayrollGenerationService
      */
     private function assignmentsFor(PayrollRun $run): array
     {
-        $staffIds = Staff::query()
+        $employeeIds = Employee::query()
             ->where('owner_id', $run->owner_id)
             ->where('status', 'active')
             ->pluck('id');
 
         return EmployeeSalaryAssignment::query()
             ->where('owner_id', $run->owner_id)
-            ->whereIn('staff_id', $staffIds)
+            ->whereIn('staff_id', $employeeIds)
             ->where('country', $run->country)
             ->effectiveOn($run->period_end)
             ->orderBy('staff_id')

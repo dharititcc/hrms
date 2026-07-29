@@ -2,12 +2,12 @@
 
 namespace App\Support;
 
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Who can act inside a workspace: the owner, plus any staff member who has
+ * Who can act inside a workspace: the owner, plus any employee who has
  * accepted an invitation and therefore has a login account.
  *
  * Single source of truth for assignee validation, mention resolution and the
@@ -18,7 +18,7 @@ final class WorkspaceUsers
     /** @return list<int> */
     public static function idsFor(int $ownerId): array
     {
-        return Staff::query()
+        return Employee::query()
             ->where('owner_id', $ownerId)
             ->whereNotNull('user_id')
             ->pluck('user_id')

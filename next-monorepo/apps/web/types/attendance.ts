@@ -3,8 +3,8 @@ export type WorkMode = "office" | "remote" | "field"
 
 export type AttendanceRecord = {
   id: number
-  staff_id: number
-  staff_name?: string | null
+  employee_id: number
+  employee_name?: string | null
   work_date: string
   check_in: string | null
   check_out: string | null
@@ -65,7 +65,7 @@ export type AttendanceLocationInput = {
 }
 
 export type CheckInInput = {
-  staff_id: number
+  employee_id: number
   work_mode?: WorkMode
   latitude?: number
   longitude?: number

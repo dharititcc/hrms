@@ -31,7 +31,7 @@ export type DashboardStats = {
     my_attendance_id: number | null
     my_status: string | null
     my_check_in: string | null
-    active_staff?: number
+    active_employees?: number
     present_today?: number
     late_today?: number
     on_leave_today?: number
@@ -58,7 +58,7 @@ export type DashboardStats = {
     awaiting_approval?: number
     awaiting_payment?: number
   }
-  people?: { staff: number; active: number; with_accounts: number }
+  people?: { employees: number; active: number; with_accounts: number }
   projects?: { total: number; active: number }
   recent_activity?: {
     id: number

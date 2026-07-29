@@ -24,7 +24,7 @@ class PayslipDeliveryService
     {
         $this->assertApproved($run);
 
-        $slips = $run->slips()->with(['staff.user', 'run'])->get();
+        $slips = $run->slips()->with(['employee.user', 'run'])->get();
 
         $sent = 0;
         $withoutAccount = 0;
@@ -56,7 +56,7 @@ class PayslipDeliveryService
     /**
      * Sends one payslip.
      *
-     * Returns false when there is nobody to send it to. A staff member with no
+     * Returns false when there is nobody to send it to. A employee with no
      * account still has an email address, but sending there would mean salary
      * figures going to an address nobody has proved they control — an invite
      * has to be accepted first.
@@ -65,7 +65,7 @@ class PayslipDeliveryService
     {
         $this->assertApproved($slip->run);
 
-        $user = $slip->staff?->user;
+        $user = $slip->employee?->user;
 
         if ($user === null) {
             return false;

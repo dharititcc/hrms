@@ -19,7 +19,7 @@ class ProjectResource extends JsonResource
             'start_date' => $this->start_date?->toDateString(),
             'end_date' => $this->end_date?->toDateString(),
             'budget' => $this->budget,
-            'members' => StaffResource::collection($this->whenLoaded('members')),
+            'members' => EmployeeResource::collection($this->whenLoaded('members')),
             'tasks_total' => $this->whenCounted('tasks'),
             'tasks_done' => $this->whenCounted('doneTasks'),
             'created_at' => $this->created_at?->toISOString(),

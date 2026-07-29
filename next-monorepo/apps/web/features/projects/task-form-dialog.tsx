@@ -134,7 +134,7 @@ export function TaskFormDialog({ projectId, task, defaultStatus, onClose }: {
               <fieldset className="grid gap-2">
                 <legend className="text-sm font-medium">Assignees</legend>
                 {assignable.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No assignable users yet. Invite a staff member to give them an account.</p>
+                  <p className="text-xs text-muted-foreground">No assignable users yet. Invite a employee member to give them an account.</p>
                 ) : (
                   <div className="grid max-h-40 gap-1 overflow-y-auto rounded-lg border p-2">
                     {assignable.map((user) => {

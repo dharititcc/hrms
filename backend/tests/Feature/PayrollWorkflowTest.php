@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\PayrollRun;
 use App\Models\SalaryComponent;
 use App\Models\SalarySlip;
-use App\Models\Staff;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -25,23 +25,23 @@ class PayrollWorkflowTest extends TestCase
         $this->owner = User::factory()->create();
     }
 
-    private function staff(string $name = 'Grace', string $email = 'g@example.com'): Staff
+    private function staff(string $name = 'Grace', string $email = 'g@example.com'): Employee
     {
-        return Staff::create([
+        return Employee::create([
             'owner_id' => $this->owner->id, 'name' => $name, 'email' => $email,
             'role' => 'member', 'status' => 'active',
         ]);
     }
 
-    private function withSalary(Staff $staff, float $basic = 50000): Staff
+    private function withSalary(Employee $employee, float $basic = 50000): Employee
     {
         EmployeeSalaryAssignment::create([
-            'owner_id' => $this->owner->id, 'staff_id' => $staff->id, 'basic_salary' => $basic,
+            'owner_id' => $this->owner->id, 'staff_id' => $employee->id, 'basic_salary' => $basic,
             'country' => 'IN', 'currency_code' => 'INR',
             'effective_from' => now()->startOfMonth()->subMonth()->toDateString(), 'status' => 'active',
         ]);
 
-        return $staff;
+        return $employee;
     }
 
     /** Generates a run through the API so it is built exactly as in production. */
@@ -59,7 +59,7 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_a_run_moves_from_draft_through_approval_to_paid(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
 
         $run = $this->generateRun();
@@ -75,7 +75,7 @@ class PayrollWorkflowTest extends TestCase
 
         // Approval stamps who committed the figures.
         $this->assertDatabaseHas('payroll_runs', ['id' => $run['id'], 'approved_by' => $this->owner->id]);
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
         $this->assertSame('approved', $slip->status->value);
 
         $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => $slip->net_salary])
@@ -125,11 +125,11 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_payment_is_refused_until_the_run_is_approved(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
 
         $this->generateRun();
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
 
         // Approval is what makes a figure safe to pay.
         $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => 100])
@@ -138,13 +138,13 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_a_payment_cannot_exceed_what_is_outstanding(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
 
         $run = $this->generateRun();
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
 
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
         $net = (float) $slip->net_salary;
 
         $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => $net + 1])
@@ -164,13 +164,13 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_reversing_a_payment_restates_the_slip_and_the_run(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
 
         $run = $this->generateRun();
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
 
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
         $paymentId = $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => $slip->net_salary])
             ->assertCreated()->json('data.id');
 
@@ -186,13 +186,13 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_a_run_with_money_against_it_cannot_be_cancelled(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
 
         $run = $this->generateRun();
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
 
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
         $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => 100])->assertCreated();
 
         // That money moved; a status change cannot unhappen it.
@@ -224,7 +224,7 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_a_manual_line_left_at_zero_does_not_block_approval(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         SalaryComponent::create([
             'owner_id' => $this->owner->id, 'code' => 'TDS', 'name' => 'Income Tax',
             'type' => 'deduction', 'calculation' => 'manual', 'value' => 0, 'is_active' => true,
@@ -237,21 +237,21 @@ class PayrollWorkflowTest extends TestCase
         // to whoever approves rather than to a hard rule.
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
 
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
         $this->assertSame('0.00', $slip->lines()->where('code', 'TDS')->value('amount'));
     }
 
     public function test_employees_cannot_approve_or_record_payments(): void
     {
-        $staff = $this->withSalary($this->staff());
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->withSalary($this->staff());
+        app(EmployeeInvitationService::class)->invite($employee);
 
         Sanctum::actingAs($this->owner);
         $run = $this->generateRun();
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
 
-        Sanctum::actingAs($staff->refresh()->user);
+        Sanctum::actingAs($employee->refresh()->user);
 
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/cancel")->assertForbidden();
         $this->postJson("/api/auth/salary-slips/{$slip->id}/payments", ['amount' => 1])->assertForbidden();
@@ -259,11 +259,11 @@ class PayrollWorkflowTest extends TestCase
 
     public function test_payments_are_scoped_to_the_workspace(): void
     {
-        $staff = $this->withSalary($this->staff());
+        $employee = $this->withSalary($this->staff());
         Sanctum::actingAs($this->owner);
         $run = $this->generateRun();
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
 
         Sanctum::actingAs(User::factory()->create());
 

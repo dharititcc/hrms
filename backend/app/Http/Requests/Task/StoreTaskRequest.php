@@ -37,7 +37,7 @@ class StoreTaskRequest extends FormRequest
             'repeat_until' => ['nullable', 'date', 'after_or_equal:due_date'],
             'assignee_ids' => ['nullable', 'array'],
             // An assignee must be a user inside this workspace: either the
-            // owner, or a staff member who has been invited and linked.
+            // owner, or a employee who has been invited and linked.
             'assignee_ids.*' => ['integer', Rule::in($this->workspaceUserIds())],
         ];
     }

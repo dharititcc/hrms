@@ -36,7 +36,7 @@ class Project extends Model
 
     public function members(): BelongsToMany
     {
-        return $this->belongsToMany(Staff::class, 'project_staff');
+        return $this->belongsToMany(Employee::class, 'project_staff', 'project_id', 'staff_id');
     }
 
     /** Tasks are related polymorphically, so a project is one of many possible targets. */

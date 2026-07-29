@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Project;
-use App\Models\Staff;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -29,10 +29,10 @@ class TaskListTest extends TestCase
 
     private function teammate(User $owner): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     public function test_search_matches_subject_and_description(): void

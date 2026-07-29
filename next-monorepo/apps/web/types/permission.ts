@@ -1,5 +1,5 @@
 export type PermissionModule =
-  | "staff" | "attendance" | "leave" | "payroll" | "expenses"
+  | "employees" | "attendance" | "leave" | "payroll" | "expenses"
   | "tasks" | "meetings" | "projects" | "recruitment" | "performance"
   | "assets" | "announcements" | "reports" | "attachments" | "activity"
 
@@ -24,7 +24,7 @@ export type WorkspacePermissions = {
   role: "admin" | "manager" | "employee" | "client"
   is_workspace_owner: boolean
   /** The caller's own employee record, or null for the workspace owner. */
-  staff_id: number | null
+  employee_id: number | null
   permissions: Permission[]
   modules: PermissionModule[]
   actions: PermissionAction[]

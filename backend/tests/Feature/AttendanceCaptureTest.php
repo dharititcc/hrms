@@ -6,10 +6,10 @@ use App\Enums\AttendanceStatus;
 use App\Enums\WorkMode;
 use App\Models\Attendance;
 use App\Models\AttendanceLocation;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -20,14 +20,14 @@ class AttendanceCaptureTest extends TestCase
 
     private User $owner;
 
-    private Staff $staff;
+    private Employee $employee;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->owner = User::factory()->create();
-        $this->staff = Staff::create([
+        $this->staff = Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Grace Hopper',
             'email' => 'grace@example.com', 'role' => 'member', 'status' => 'active',
         ]);
@@ -220,11 +220,11 @@ class AttendanceCaptureTest extends TestCase
 
     public function test_an_employee_cannot_check_in_for_a_colleague(): void
     {
-        $colleague = Staff::create([
+        $colleague = Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Ada', 'email' => 'ada@example.com',
             'role' => 'member', 'status' => 'active',
         ]);
-        app(StaffInvitationService::class)->invite($this->staff);
+        app(EmployeeInvitationService::class)->invite($this->staff);
 
         Sanctum::actingAs($this->staff->refresh()->user);
 
@@ -234,7 +234,7 @@ class AttendanceCaptureTest extends TestCase
 
     public function test_today_returns_the_callers_own_record(): void
     {
-        app(StaffInvitationService::class)->invite($this->staff);
+        app(EmployeeInvitationService::class)->invite($this->staff);
         $this->travelTo(now()->setTime(9, 0));
 
         Sanctum::actingAs($this->staff->refresh()->user);

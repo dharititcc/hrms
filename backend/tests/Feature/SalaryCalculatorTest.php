@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use App\Enums\PayrollCountry;
 use App\Enums\SalaryCalculation;
 use App\Enums\SalaryComponentType;
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\EmployeeSalaryComponentValue;
 use App\Models\SalaryComponent;
 use App\Models\SalaryStructure;
-use App\Models\Staff;
 use App\Models\User;
 use App\Services\Payroll\SalaryCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,7 +49,7 @@ class SalaryCalculatorTest extends TestCase
 
     private function assignment(float $basic = 50000): EmployeeSalaryAssignment
     {
-        $staff = Staff::create([
+        $employee = Employee::create([
             'owner_id' => $this->owner->id,
             'name' => 'Grace Hopper',
             'email' => 'grace'.uniqid().'@example.com',
@@ -59,7 +59,7 @@ class SalaryCalculatorTest extends TestCase
 
         return EmployeeSalaryAssignment::create([
             'owner_id' => $this->owner->id,
-            'staff_id' => $staff->id,
+            'staff_id' => $employee->id,
             'salary_structure_id' => $this->structure->id,
             'basic_salary' => $basic,
             'currency_code' => 'INR',

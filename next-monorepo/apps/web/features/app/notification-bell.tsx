@@ -19,7 +19,7 @@ const ICONS: Record<string, React.ReactNode> = {
   MeetingInvitationNotification: <CalendarDays className="size-3.5" />,
   MeetingChangedNotification: <CalendarX className="size-3.5" />,
   MeetingReminderNotification: <Clock className="size-3.5" />,
-  StaffInvitationNotification: <Mail className="size-3.5" />,
+  EmployeeInvitationNotification: <Mail className="size-3.5" />,
 }
 
 function iconFor(type: NotificationType): React.ReactNode {

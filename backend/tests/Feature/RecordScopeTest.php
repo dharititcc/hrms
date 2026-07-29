@@ -3,15 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\Employee;
 use App\Models\Expense;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\Meeting;
 use App\Models\MeetingParticipant;
-use App\Models\Staff;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -23,34 +23,34 @@ class RecordScopeTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function staffFor(User $owner, string $role, string $email): Staff
+    private function staffFor(User $owner, string $role, string $email): Employee
     {
-        return Staff::create(['owner_id' => $owner->id, 'name' => ucfirst($role), 'email' => $email, 'role' => $role, 'status' => 'active']);
+        return Employee::create(['owner_id' => $owner->id, 'name' => ucfirst($role), 'email' => $email, 'role' => $role, 'status' => 'active']);
     }
 
     private function invited(User $owner, string $role, string $email): array
     {
-        $staff = $this->staffFor($owner, $role, $email);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->staffFor($owner, $role, $email);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return [$staff->refresh(), $staff->user];
+        return [$employee->refresh(), $employee->user];
     }
 
     public function test_employees_see_only_their_own_attendance_leave_and_expenses(): void
     {
         $owner = User::factory()->create();
-        [$staff, $employee] = $this->invited($owner, 'member', 'employee@example.com');
+        [$employee, $account] = $this->invited($owner, 'member', 'employee@example.com');
         $colleague = $this->staffFor($owner, 'member', 'colleague@example.com');
 
         $type = LeaveType::create(['owner_id' => $owner->id, 'name' => 'Annual leave', 'days_per_year' => 20, 'is_active' => true]);
 
-        foreach ([$staff->id, $colleague->id] as $staffId) {
-            Attendance::create(['owner_id' => $owner->id, 'staff_id' => $staffId, 'work_date' => now()->toDateString(), 'status' => 'present']);
-            LeaveRequest::create(['owner_id' => $owner->id, 'staff_id' => $staffId, 'leave_type_id' => $type->id, 'start_date' => now()->toDateString(), 'end_date' => now()->addDay()->toDateString(), 'status' => 'pending']);
-            Expense::create(['owner_id' => $owner->id, 'staff_id' => $staffId, 'title' => 'Taxi', 'category' => 'Travel', 'amount' => 20, 'expense_date' => now()->toDateString(), 'status' => 'pending']);
+        foreach ([$employee->id, $colleague->id] as $employeeId) {
+            Attendance::create(['owner_id' => $owner->id, 'staff_id' => $employeeId, 'work_date' => now()->toDateString(), 'status' => 'present']);
+            LeaveRequest::create(['owner_id' => $owner->id, 'staff_id' => $employeeId, 'leave_type_id' => $type->id, 'start_date' => now()->toDateString(), 'end_date' => now()->addDay()->toDateString(), 'status' => 'pending']);
+            Expense::create(['owner_id' => $owner->id, 'staff_id' => $employeeId, 'title' => 'Taxi', 'category' => 'Travel', 'amount' => 20, 'expense_date' => now()->toDateString(), 'status' => 'pending']);
         }
 
-        Sanctum::actingAs($employee);
+        Sanctum::actingAs($account);
 
         foreach (['/api/auth/attendance', '/api/auth/leave/requests', '/api/auth/expenses'] as $endpoint) {
             $this->getJson($endpoint)->assertOk()->assertJsonCount(1, 'data');
@@ -66,11 +66,11 @@ class RecordScopeTest extends TestCase
     public function test_employees_cannot_file_records_in_a_colleagues_name(): void
     {
         $owner = User::factory()->create();
-        [, $employee] = $this->invited($owner, 'member', 'employee@example.com');
+        [, $account] = $this->invited($owner, 'member', 'employee@example.com');
         $colleague = $this->staffFor($owner, 'member', 'colleague@example.com');
         $type = LeaveType::create(['owner_id' => $owner->id, 'name' => 'Annual leave', 'days_per_year' => 20, 'is_active' => true]);
 
-        Sanctum::actingAs($employee);
+        Sanctum::actingAs($account);
 
         $this->postJson('/api/auth/expenses', [
             'staff_id' => $colleague->id, 'title' => 'Not mine', 'category' => 'Travel',
@@ -88,13 +88,13 @@ class RecordScopeTest extends TestCase
     public function test_employees_can_still_act_for_themselves(): void
     {
         $owner = User::factory()->create();
-        [$staff, $employee] = $this->invited($owner, 'member', 'employee@example.com');
+        [$employee, $account] = $this->invited($owner, 'member', 'employee@example.com');
 
-        Sanctum::actingAs($employee);
+        Sanctum::actingAs($account);
 
-        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $staff->id])->assertOk();
+        $this->postJson('/api/auth/attendance/check-in', ['staff_id' => $employee->id])->assertOk();
         $this->postJson('/api/auth/expenses', [
-            'staff_id' => $staff->id, 'title' => 'Taxi', 'category' => 'Travel',
+            'staff_id' => $employee->id, 'title' => 'Taxi', 'category' => 'Travel',
             'amount' => 20, 'expense_date' => now()->toDateString(),
         ])->assertCreated();
     }
@@ -127,8 +127,8 @@ class RecordScopeTest extends TestCase
         $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(2, 'data');
 
         // An employee holds view-all and sees all three.
-        [, $employee] = $this->invited($owner, 'member', 'employee@example.com');
-        Sanctum::actingAs($employee);
+        [, $account] = $this->invited($owner, 'member', 'employee@example.com');
+        Sanctum::actingAs($account);
         $this->getJson('/api/auth/tasks')->assertOk()->assertJsonCount(3, 'data');
     }
 
@@ -161,10 +161,10 @@ class RecordScopeTest extends TestCase
     public function test_attendance_month_filter_works_on_this_database(): void
     {
         $owner = User::factory()->create();
-        $staff = $this->staffFor($owner, 'member', 'employee@example.com');
+        $employee = $this->staffFor($owner, 'member', 'employee@example.com');
 
-        Attendance::create(['owner_id' => $owner->id, 'staff_id' => $staff->id, 'work_date' => now()->toDateString(), 'status' => 'present']);
-        Attendance::create(['owner_id' => $owner->id, 'staff_id' => $staff->id, 'work_date' => now()->subMonths(2)->toDateString(), 'status' => 'present']);
+        Attendance::create(['owner_id' => $owner->id, 'staff_id' => $employee->id, 'work_date' => now()->toDateString(), 'status' => 'present']);
+        Attendance::create(['owner_id' => $owner->id, 'staff_id' => $employee->id, 'work_date' => now()->subMonths(2)->toDateString(), 'status' => 'present']);
 
         Sanctum::actingAs($owner);
 

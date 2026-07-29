@@ -7,8 +7,8 @@ use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\StorePayrollProfileRequest;
 use App\Http\Resources\PayrollProfileResource;
+use App\Models\Employee;
 use App\Models\EmployeePayrollProfile;
-use App\Models\Staff;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,16 +16,16 @@ use Illuminate\Http\Request;
 /**
  * Where an employee's pay actually goes, and under what tax identity.
  *
- * Lives under the staff resource because these details belong to a person
+ * Lives under the employee resource because these details belong to a person
  * rather than to a payroll run, and there is exactly one per employee.
  */
 class PayrollProfileController extends Controller
 {
-    public function show(Request $request, Staff $staff): JsonResponse
+    public function show(Request $request, Employee $employee): JsonResponse
     {
-        $this->authorizeStaff($request, $staff);
+        $this->authorizeEmployee($request, $employee);
 
-        $profile = EmployeePayrollProfile::where('staff_id', $staff->id)->first();
+        $profile = EmployeePayrollProfile::where('staff_id', $employee->id)->first();
 
         return response()->json([
             'data' => $profile === null ? null : new PayrollProfileResource($profile),
@@ -38,15 +38,15 @@ class PayrollProfileController extends Controller
      * A single upsert rather than separate create and update: there is one row
      * per employee, so a caller should not have to know whether it exists.
      */
-    public function store(StorePayrollProfileRequest $request, Staff $staff): JsonResponse
+    public function store(StorePayrollProfileRequest $request, Employee $employee): JsonResponse
     {
-        $this->authorizeStaff($request, $staff, forWriting: true);
+        $this->authorizeEmployee($request, $employee, forWriting: true);
 
-        $existing = EmployeePayrollProfile::where('staff_id', $staff->id)->first();
+        $existing = EmployeePayrollProfile::where('staff_id', $employee->id)->first();
 
         $profile = EmployeePayrollProfile::updateOrCreate(
-            ['staff_id' => $staff->id],
-            [...$request->payload(), 'owner_id' => $staff->owner_id],
+            ['staff_id' => $employee->id],
+            [...$request->payload(), 'owner_id' => $employee->owner_id],
         );
 
         return (new PayrollProfileResource($profile->refresh()))
@@ -54,11 +54,11 @@ class PayrollProfileController extends Controller
             ->setStatusCode($existing === null ? 201 : 200);
     }
 
-    public function destroy(Request $request, Staff $staff): JsonResponse
+    public function destroy(Request $request, Employee $employee): JsonResponse
     {
-        $this->authorizeStaff($request, $staff, forWriting: true);
+        $this->authorizeEmployee($request, $employee, forWriting: true);
 
-        EmployeePayrollProfile::where('staff_id', $staff->id)->delete();
+        EmployeePayrollProfile::where('staff_id', $employee->id)->delete();
 
         return response()->json(['message' => 'Payroll profile deleted.']);
     }
@@ -73,17 +73,17 @@ class PayrollProfileController extends Controller
      * bank details is the classic payroll diversion attack, and the trail is
      * the defence rather than a permission nobody could work with.
      */
-    private function authorizeStaff(Request $request, Staff $staff, bool $forWriting = false): void
+    private function authorizeEmployee(Request $request, Employee $employee, bool $forWriting = false): void
     {
         $user = $request->user();
 
-        abort_unless($staff->owner_id === $user->workspaceOwnerId(), 403);
-        abort_unless(RecordScope::allows($user, Module::Payroll, $staff->id), 403);
+        abort_unless($employee->owner_id === $user->workspaceOwnerId(), 403);
+        abort_unless(RecordScope::allows($user, Module::Payroll, $employee->id), 403);
 
         if ($forWriting) {
             // Their own, or the payroll permission to maintain anybody's.
             abort_unless(
-                $user->staffId() === $staff->id || $user->hasPermission(Module::Payroll, Action::Edit),
+                $user->employeeId() === $employee->id || $user->hasPermission(Module::Payroll, Action::Edit),
                 403,
             );
         }

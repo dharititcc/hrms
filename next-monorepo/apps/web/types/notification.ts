@@ -10,7 +10,7 @@ export type NotificationType =
   | "MeetingInvitationNotification"
   | "MeetingChangedNotification"
   | "MeetingReminderNotification"
-  | "StaffInvitationNotification"
+  | "EmployeeInvitationNotification"
   | (string & {})
 
 /** Every notification carries a title and message; the rest varies by type. */

@@ -40,7 +40,7 @@ class LeaveController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = LeaveRequest::query()
-            ->with(['staff', 'leaveType'])
+            ->with(['employee', 'leaveType'])
             ->where('owner_id', $request->user()->workspaceOwnerId());
 
         // Without leave.view-all, only the caller's own requests.
@@ -60,7 +60,7 @@ class LeaveController extends Controller
         ]);
 
         $ownerId = $request->user()->workspaceOwnerId();
-        $request->user()->workspaceStaff()->findOrFail($validated['staff_id']);
+        $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
         LeaveType::query()->where('owner_id', $ownerId)->findOrFail($validated['leave_type_id']);
 
         // Requesting leave on a colleague's behalf needs oversight of the module.
@@ -76,7 +76,7 @@ class LeaveController extends Controller
             'status' => LeaveRequestStatus::Pending->value,
         ]);
 
-        return response()->json(new LeaveRequestResource($leaveRequest->load(['staff', 'leaveType'])), 201);
+        return response()->json(new LeaveRequestResource($leaveRequest->load(['employee', 'leaveType'])), 201);
     }
 
     public function updateStatus(Request $request, LeaveRequest $leaveRequest): JsonResponse
@@ -90,6 +90,6 @@ class LeaveController extends Controller
         // reviewed_by is the actual reviewer, not the workspace owner.
         $leaveRequest->update([...$validated, 'reviewed_by' => $request->user()->id]);
 
-        return response()->json(new LeaveRequestResource($leaveRequest->load(['staff', 'leaveType'])));
+        return response()->json(new LeaveRequestResource($leaveRequest->load(['employee', 'leaveType'])));
     }
 }

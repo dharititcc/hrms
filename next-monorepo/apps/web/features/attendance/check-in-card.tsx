@@ -20,7 +20,7 @@ const MODES: WorkMode[] = ["office", "remote", "field"]
  * fix a position, attendance is still recorded without coordinates rather than
  * blocking somebody from starting work.
  */
-export function CheckInCard({ staffId }: { staffId: number | null }) {
+export function CheckInCard({ employeeId }: { employeeId: number | null }) {
   const { data: today, isLoading } = useTodayAttendance()
   const { checkIn, checkOut } = useAttendanceMutations()
   const { can } = usePermissions()
@@ -31,7 +31,7 @@ export function CheckInCard({ staffId }: { staffId: number | null }) {
 
   if (!can("attendance.create")) return null
 
-  if (staffId === null) {
+  if (employeeId === null) {
     return (
       <section className="rounded-2xl border bg-background p-5">
         <p className="text-sm text-muted-foreground">
@@ -57,7 +57,7 @@ export function CheckInCard({ staffId }: { staffId: number | null }) {
     try {
       const { position } = await withPosition((position) =>
         checkIn.mutateAsync({
-          staff_id: staffId,
+          employee_id: employeeId,
           work_mode: mode,
           latitude: position?.latitude,
           longitude: position?.longitude,

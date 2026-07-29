@@ -1,37 +1,37 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\API\AuthController;
-use App\Http\Controllers\API\StaffController;
-use App\Http\Controllers\API\AttendanceController;
-use App\Http\Controllers\API\LeaveController;
-use App\Http\Controllers\API\PayrollController;
-use App\Http\Controllers\API\ExpenseController;
-use App\Http\Controllers\API\PhaseFourController;
-use App\Http\Controllers\API\PhaseFiveController;
 use App\Http\Controllers\API\ActivityLogController;
 use App\Http\Controllers\API\AttachmentController;
+use App\Http\Controllers\API\AttendanceController;
 use App\Http\Controllers\API\AttendanceLocationController;
+use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\EmployeeController;
+use App\Http\Controllers\API\EmployeeInvitationController;
+use App\Http\Controllers\API\ExpenseController;
 use App\Http\Controllers\API\GuestRsvpController;
+use App\Http\Controllers\API\LeaveController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\PayrollController;
 use App\Http\Controllers\API\PayrollProfileController;
 use App\Http\Controllers\API\PayrollRunController;
 use App\Http\Controllers\API\PayslipController;
 use App\Http\Controllers\API\PermissionController;
+use App\Http\Controllers\API\PhaseFiveController;
+use App\Http\Controllers\API\PhaseFourController;
+use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\SalaryAssignmentController;
 use App\Http\Controllers\API\SalaryComponentController;
 use App\Http\Controllers\API\SalaryPaymentController;
 use App\Http\Controllers\API\SalaryStructureController;
-use App\Http\Controllers\API\StaffInvitationController;
-use App\Http\Controllers\API\ProjectController;
 use App\Http\Controllers\API\TaskChecklistController;
 use App\Http\Controllers\API\TaskCommentController;
 use App\Http\Controllers\API\TaskController;
 use App\Http\Controllers\API\TaskTimeEntryController;
 use App\Http\Controllers\API\WorkspaceUserController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -46,8 +46,6 @@ Route::middleware('throttle:20,1')->group(function () {
     Route::get('/meetings/invite/{token}', [GuestRsvpController::class, 'show']);
     Route::post('/meetings/invite/{token}/respond', [GuestRsvpController::class, 'respond']);
 });
-
-
 
 Route::prefix('auth')->group(function () {
 
@@ -67,7 +65,7 @@ Route::prefix('auth')->group(function () {
         Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationNotification'])
             ->middleware('throttle:6,1');
 
-        Route::apiResource('staff', StaffController::class);
+        Route::apiResource('employees', EmployeeController::class);
         /*
         | These modules predate the policy layer and their controllers only
         | check tenancy, so permission is enforced here with can: middleware
@@ -113,15 +111,15 @@ Route::prefix('auth')->group(function () {
         | employee maintains their own, and RecordScope in the controller is
         | what keeps them out of anybody else's.
         */
-        Route::get('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'show'])->middleware('can:payroll.view');
-        Route::put('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'store'])->middleware('can:payroll.view');
-        Route::delete('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'destroy'])->middleware('can:payroll.edit');
+        Route::get('/employees/{employee}/payroll-profile', [PayrollProfileController::class, 'show'])->middleware('can:payroll.view');
+        Route::put('/employees/{employee}/payroll-profile', [PayrollProfileController::class, 'store'])->middleware('can:payroll.view');
+        Route::delete('/employees/{employee}/payroll-profile', [PayrollProfileController::class, 'destroy'])->middleware('can:payroll.edit');
 
         // An employee's salary and its revision history.
-        Route::get('/staff/{staff}/salary', [SalaryAssignmentController::class, 'current'])->middleware('can:payroll.view');
-        Route::get('/staff/{staff}/salary/history', [SalaryAssignmentController::class, 'index'])->middleware('can:payroll.view');
-        Route::post('/staff/{staff}/salary', [SalaryAssignmentController::class, 'store'])->middleware('can:payroll.create');
-        Route::patch('/staff/{staff}/salary/end', [SalaryAssignmentController::class, 'end'])->middleware('can:payroll.edit');
+        Route::get('/employees/{employee}/salary', [SalaryAssignmentController::class, 'current'])->middleware('can:payroll.view');
+        Route::get('/employees/{employee}/salary/history', [SalaryAssignmentController::class, 'index'])->middleware('can:payroll.view');
+        Route::post('/employees/{employee}/salary', [SalaryAssignmentController::class, 'store'])->middleware('can:payroll.create');
+        Route::patch('/employees/{employee}/salary/end', [SalaryAssignmentController::class, 'end'])->middleware('can:payroll.edit');
 
         Route::get('/payroll-runs', [PayrollRunController::class, 'index'])->middleware('can:payroll.view');
         Route::get('/payroll-runs/{run}', [PayrollRunController::class, 'show'])->middleware('can:payroll.view');
@@ -167,8 +165,8 @@ Route::prefix('auth')->group(function () {
         Route::post('/announcements', [PhaseFiveController::class, 'storeAnnouncement'])->middleware('can:announcements.create');
         Route::get('/reports/summary', [PhaseFiveController::class, 'report'])->middleware('can:reports.view');
 
-        Route::post('/staff/{staff}/invite', [StaffInvitationController::class, 'store']);
-        Route::delete('/staff/{staff}/invite', [StaffInvitationController::class, 'destroy']);
+        Route::post('/employees/{employee}/invite', [EmployeeInvitationController::class, 'store']);
+        Route::delete('/employees/{employee}/invite', [EmployeeInvitationController::class, 'destroy']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);

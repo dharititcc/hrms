@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Project;
-use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -13,9 +13,9 @@ class ProjectManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeStaff(User $owner, string $email = 'member@example.com'): Staff
+    private function makeEmployee(User $owner, string $email = 'member@example.com'): Employee
     {
-        return Staff::create([
+        return Employee::create([
             'owner_id' => $owner->id,
             'name' => 'Grace Hopper',
             'email' => $email,
@@ -27,7 +27,7 @@ class ProjectManagementTest extends TestCase
     public function test_user_can_create_a_project_with_members_and_manage_its_tasks(): void
     {
         $user = User::factory()->create();
-        $staff = $this->makeStaff($user);
+        $employee = $this->makeEmployee($user);
         Sanctum::actingAs($user);
 
         $create = $this->postJson('/api/auth/projects', [
@@ -37,12 +37,12 @@ class ProjectManagementTest extends TestCase
             'start_date' => '2026-08-01',
             'end_date' => '2026-09-30',
             'budget' => 15000,
-            'member_ids' => [$staff->id],
+            'member_ids' => [$employee->id],
         ]);
 
         $create->assertCreated()
             ->assertJsonPath('data.name', 'Website relaunch')
-            ->assertJsonPath('data.members.0.id', $staff->id);
+            ->assertJsonPath('data.members.0.id', $employee->id);
 
         $project = Project::query()->where('owner_id', $user->id)->firstOrFail();
 
@@ -99,7 +99,7 @@ class ProjectManagementTest extends TestCase
     {
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
-        $foreignStaff = $this->makeStaff($otherUser, 'foreign@example.com');
+        $foreignStaff = $this->makeEmployee($otherUser, 'foreign@example.com');
 
         Sanctum::actingAs($user);
 

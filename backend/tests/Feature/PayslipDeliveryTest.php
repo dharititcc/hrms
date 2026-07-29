@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\SalaryComponent;
 use App\Models\SalarySlip;
-use App\Models\Staff;
 use App\Models\User;
 use App\Notifications\PayslipIssuedNotification;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
+use App\Services\Payroll\PayslipPdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -26,24 +27,24 @@ class PayslipDeliveryTest extends TestCase
         $this->owner = User::factory()->create(['name' => 'Acme Ltd']);
     }
 
-    private function staff(string $name = 'Grace', string $email = 'g@example.com'): Staff
+    private function staff(string $name = 'Grace', string $email = 'g@example.com'): Employee
     {
-        $staff = Staff::create([
+        $employee = Employee::create([
             'owner_id' => $this->owner->id, 'name' => $name, 'email' => $email,
             'role' => 'member', 'status' => 'active',
         ]);
 
         EmployeeSalaryAssignment::create([
-            'owner_id' => $this->owner->id, 'staff_id' => $staff->id, 'basic_salary' => 50000,
+            'owner_id' => $this->owner->id, 'staff_id' => $employee->id, 'basic_salary' => 50000,
             'country' => 'IN', 'currency_code' => 'INR',
             'effective_from' => now()->startOfMonth()->subMonth()->toDateString(), 'status' => 'active',
         ]);
 
-        return $staff;
+        return $employee;
     }
 
     /** @return array{0: array<string, mixed>, 1: SalarySlip} */
-    private function approvedRun(Staff $staff): array
+    private function approvedRun(Employee $employee): array
     {
         $start = now()->startOfMonth()->subMonth();
 
@@ -55,19 +56,19 @@ class PayslipDeliveryTest extends TestCase
 
         $this->patchJson("/api/auth/payroll-runs/{$run['id']}/approve")->assertOk();
 
-        return [$run, SalarySlip::where('staff_id', $staff->id)->firstOrFail()];
+        return [$run, SalarySlip::where('staff_id', $employee->id)->firstOrFail()];
     }
 
     public function test_a_payslip_downloads_as_a_pdf(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         SalaryComponent::create([
             'owner_id' => $this->owner->id, 'code' => 'HRA', 'name' => 'House Rent Allowance',
             'type' => 'earning', 'calculation' => 'percent_of_basic', 'value' => 40, 'is_active' => true,
         ]);
 
         Sanctum::actingAs($this->owner);
-        [, $slip] = $this->approvedRun($staff);
+        [, $slip] = $this->approvedRun($employee);
 
         $response = $this->get("/api/auth/salary-slips/{$slip->id}/download")->assertOk();
 
@@ -81,7 +82,7 @@ class PayslipDeliveryTest extends TestCase
 
     public function test_the_payslip_shows_the_frozen_breakdown(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         SalaryComponent::create([
             'owner_id' => $this->owner->id, 'code' => 'HRA', 'name' => 'House Rent Allowance',
             'type' => 'earning', 'calculation' => 'percent_of_basic', 'value' => 40, 'is_active' => true,
@@ -93,7 +94,7 @@ class PayslipDeliveryTest extends TestCase
         ]);
 
         Sanctum::actingAs($this->owner);
-        [, $slip] = $this->approvedRun($staff);
+        [, $slip] = $this->approvedRun($employee);
 
         /*
         | Asserting on the rendered view rather than the PDF bytes: dompdf
@@ -114,15 +115,15 @@ class PayslipDeliveryTest extends TestCase
 
     public function test_the_payslip_shows_the_account_masked_when_one_is_on_file(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
 
         Sanctum::actingAs($this->owner);
-        $this->putJson("/api/auth/staff/{$staff->id}/payroll-profile", [
+        $this->putJson("/api/auth/employees/{$employee->id}/payroll-profile", [
             'country' => 'IN', 'bank_name' => 'State Bank',
             'account_holder_name' => 'Grace Hopper', 'account_number' => '123456789012',
         ])->assertCreated();
 
-        [, $slip] = $this->approvedRun($staff);
+        [, $slip] = $this->approvedRun($employee);
         $html = view('payroll.payslip', $this->invokePdfData($slip))->render();
 
         // A payslip is forwarded and filed far more casually than it is
@@ -135,15 +136,15 @@ class PayslipDeliveryTest extends TestCase
     /** @return array<string, mixed> */
     private function invokePdfData(SalarySlip $slip): array
     {
-        $service = app(\App\Services\Payroll\PayslipPdfService::class);
+        $service = app(PayslipPdfService::class);
         $method = new \ReflectionMethod($service, 'data');
 
-        return $method->invoke($service, $slip->load(['staff', 'run', 'lines', 'owner']));
+        return $method->invoke($service, $slip->load(['employee', 'run', 'lines', 'owner']));
     }
 
     public function test_a_draft_payslip_cannot_be_downloaded(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         $start = now()->startOfMonth()->subMonth();
 
         Sanctum::actingAs($this->owner);
@@ -152,7 +153,7 @@ class PayslipDeliveryTest extends TestCase
             'period_start' => $start->toDateString(), 'period_end' => $start->copy()->endOfMonth()->toDateString(),
         ])->assertCreated();
 
-        $slip = SalarySlip::where('staff_id', $staff->id)->firstOrFail();
+        $slip = SalarySlip::where('staff_id', $employee->id)->firstOrFail();
 
         // Working figures. A document headed "payslip" gets treated as final.
         $this->getJson("/api/auth/salary-slips/{$slip->id}/download")->assertStatus(422);
@@ -162,7 +163,7 @@ class PayslipDeliveryTest extends TestCase
     {
         $mine = $this->staff('Grace', 'g@example.com');
         $theirs = $this->staff('Ada', 'a@example.com');
-        app(StaffInvitationService::class)->invite($mine);
+        app(EmployeeInvitationService::class)->invite($mine);
 
         Sanctum::actingAs($this->owner);
         $this->approvedRun($mine);
@@ -181,17 +182,17 @@ class PayslipDeliveryTest extends TestCase
     {
         Notification::fake();
 
-        $staff = $this->staff();
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->staff();
+        app(EmployeeInvitationService::class)->invite($employee);
 
         Sanctum::actingAs($this->owner);
-        [$run, $slip] = $this->approvedRun($staff);
+        [$run, $slip] = $this->approvedRun($employee);
 
         $this->postJson("/api/auth/payroll-runs/{$run['id']}/email")
             ->assertOk()
             ->assertJsonPath('meta.sent', 1);
 
-        Notification::assertSentTo($staff->refresh()->user, PayslipIssuedNotification::class);
+        Notification::assertSentTo($employee->refresh()->user, PayslipIssuedNotification::class);
         $this->assertNotNull($slip->refresh()->emailed_at);
     }
 
@@ -199,11 +200,11 @@ class PayslipDeliveryTest extends TestCase
     {
         Notification::fake();
 
-        $staff = $this->staff();
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->staff();
+        app(EmployeeInvitationService::class)->invite($employee);
 
         Sanctum::actingAs($this->owner);
-        [$run] = $this->approvedRun($staff);
+        [$run] = $this->approvedRun($employee);
 
         $this->postJson("/api/auth/payroll-runs/{$run['id']}/email")->assertOk()->assertJsonPath('meta.sent', 1);
 
@@ -222,10 +223,10 @@ class PayslipDeliveryTest extends TestCase
     {
         Notification::fake();
 
-        $staff = $this->staff();
+        $employee = $this->staff();
 
         Sanctum::actingAs($this->owner);
-        [$run, $slip] = $this->approvedRun($staff);
+        [$run, $slip] = $this->approvedRun($employee);
 
         // They have an email address, but nobody has proved they control it.
         $this->postJson("/api/auth/payroll-runs/{$run['id']}/email")
@@ -241,8 +242,8 @@ class PayslipDeliveryTest extends TestCase
     {
         Notification::fake();
 
-        $staff = $this->staff();
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->staff();
+        app(EmployeeInvitationService::class)->invite($employee);
         $start = now()->startOfMonth()->subMonth();
 
         Sanctum::actingAs($this->owner);
@@ -255,20 +256,20 @@ class PayslipDeliveryTest extends TestCase
         $this->postJson("/api/auth/payroll-runs/{$run['id']}/email")->assertStatus(422);
         // Not assertNothingSent: inviting the staff member above legitimately
         // sent one.
-        Notification::assertNotSentTo($staff->refresh()->user, PayslipIssuedNotification::class);
+        Notification::assertNotSentTo($employee->refresh()->user, PayslipIssuedNotification::class);
     }
 
     public function test_employees_cannot_email_payslips_and_other_workspaces_cannot_reach_them(): void
     {
         Notification::fake();
 
-        $staff = $this->staff();
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = $this->staff();
+        app(EmployeeInvitationService::class)->invite($employee);
 
         Sanctum::actingAs($this->owner);
-        [$run, $slip] = $this->approvedRun($staff);
+        [$run, $slip] = $this->approvedRun($employee);
 
-        Sanctum::actingAs($staff->refresh()->user);
+        Sanctum::actingAs($employee->refresh()->user);
         $this->postJson("/api/auth/payroll-runs/{$run['id']}/email")->assertForbidden();
 
         Sanctum::actingAs(User::factory()->create());

@@ -47,9 +47,9 @@ class Attendance extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function staff(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(Staff::class);
+        return $this->belongsTo(Employee::class, 'staff_id');
     }
 
     public function shift(): BelongsTo

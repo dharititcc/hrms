@@ -112,8 +112,8 @@ export type SalaryPaymentListResponse = {
  */
 export type PayrollProfile = {
   id: number
-  staff_id: number
-  staff_name?: string | null
+  employee_id: number
+  employee_name?: string | null
   country: string
   country_label: string
   currency_code: string
@@ -188,8 +188,8 @@ export type SalarySlip = {
   period?: string | null
   period_start?: string | null
   period_end?: string | null
-  staff_id: number
-  staff_name?: string | null
+  employee_id: number
+  employee_name?: string | null
   country: string
   currency_code: string
   currency_symbol: string
@@ -244,7 +244,7 @@ export type GeneratePayrollInput = {
   period_end: string
   pay_date?: string | null
   notes?: string | null
-  /** staff id => component code => amount, for progressive taxes. */
+  /** employee id => component code => amount, for progressive taxes. */
   manual_amounts?: Record<number, Record<string, number>>
 }
 
@@ -252,8 +252,8 @@ export type SalaryAssignmentStatus = "active" | "superseded" | "ended"
 
 export type SalaryAssignment = {
   id: number
-  staff_id: number
-  staff_name?: string | null
+  employee_id: number
+  employee_name?: string | null
   salary_structure_id: number | null
   structure_name?: string | null
   basic_salary: string

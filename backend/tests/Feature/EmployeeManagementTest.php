@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
-class StaffManagementTest extends TestCase
+class EmployeeManagementTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -17,7 +17,7 @@ class StaffManagementTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $create = $this->postJson('/api/auth/staff', [
+        $create = $this->postJson('/api/auth/employees', [
             'name' => 'Ada Lovelace',
             'email' => 'ada@example.com',
             'phone' => '+1 555 0100',
@@ -26,9 +26,9 @@ class StaffManagementTest extends TestCase
         ]);
 
         $create->assertCreated()->assertJsonPath('data.email', 'ada@example.com');
-        $staff = Staff::query()->where('owner_id', $user->id)->firstOrFail();
+        $employee = Employee::query()->where('owner_id', $user->id)->firstOrFail();
 
-        $this->putJson("/api/auth/staff/{$staff->id}", [
+        $this->putJson("/api/auth/employees/{$employee->id}", [
             'name' => 'Ada Byron Lovelace',
             'email' => 'ada@example.com',
             'phone' => null,
@@ -36,15 +36,15 @@ class StaffManagementTest extends TestCase
             'status' => 'inactive',
         ])->assertOk()->assertJsonPath('data.status', 'inactive');
 
-        $this->deleteJson("/api/auth/staff/{$staff->id}")->assertOk();
-        $this->assertDatabaseMissing('staff', ['id' => $staff->id]);
+        $this->deleteJson("/api/auth/employees/{$employee->id}")->assertOk();
+        $this->assertDatabaseMissing('staff', ['id' => $employee->id]);
     }
 
     public function test_user_cannot_view_another_users_staff(): void
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
-        $staff = Staff::create([
+        $employee = Employee::create([
             'owner_id' => $owner->id,
             'name' => 'Private teammate',
             'email' => 'private@example.com',
@@ -54,7 +54,7 @@ class StaffManagementTest extends TestCase
 
         Sanctum::actingAs($otherUser);
 
-        $this->getJson('/api/auth/staff')->assertOk()->assertJsonCount(0, 'data');
-        $this->getJson("/api/auth/staff/{$staff->id}")->assertForbidden();
+        $this->getJson('/api/auth/employees')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/auth/employees/{$employee->id}")->assertForbidden();
     }
 }

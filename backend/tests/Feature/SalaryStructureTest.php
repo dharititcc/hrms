@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\SalaryComponent;
 use App\Models\SalaryStructure;
-use App\Models\Staff;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -80,11 +80,11 @@ class SalaryStructureTest extends TestCase
     public function test_a_structure_in_use_cannot_be_deleted(): void
     {
         $owner = User::factory()->create();
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
         $structure = $this->structure($owner);
 
         EmployeeSalaryAssignment::create([
-            'owner_id' => $owner->id, 'staff_id' => $staff->id, 'salary_structure_id' => $structure->id,
+            'owner_id' => $owner->id, 'staff_id' => $employee->id, 'salary_structure_id' => $structure->id,
             'basic_salary' => 50000, 'country' => 'IN', 'currency_code' => 'INR',
             'effective_from' => now()->toDateString(), 'status' => 'active',
         ]);
@@ -121,11 +121,11 @@ class SalaryStructureTest extends TestCase
     public function test_employees_cannot_read_or_change_structures(): void
     {
         $owner = User::factory()->create();
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
         $structure = $this->structure($owner);
 
-        Sanctum::actingAs($staff->refresh()->user);
+        Sanctum::actingAs($employee->refresh()->user);
 
         // Structures reveal the whole workspace's pay design, so they sit
         // behind view-all rather than view.

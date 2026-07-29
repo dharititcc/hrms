@@ -42,9 +42,9 @@ class ProjectRepository
         return $project->refresh();
     }
 
-    public function syncMembers(Project $project, array $staffIds): void
+    public function syncMembers(Project $project, array $employeeIds): void
     {
-        $project->members()->sync($staffIds);
+        $project->members()->sync($employeeIds);
     }
 
     public function delete(Project $project): void

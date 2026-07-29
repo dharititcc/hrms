@@ -12,24 +12,24 @@ import { browserTimezone, instantToZonedInput, supportedTimezones, timezoneLabel
 import { meetingSchema, parseGuestEmails, type MeetingFormValues } from "@/features/meetings/schemas"
 import { useMeetingMutations } from "@/hooks/use-meetings"
 import { useWorkspaceUsers } from "@/hooks/use-projects"
-import { useStaff } from "@/hooks/use-staff"
+import { useEmployees } from "@/hooks/use-employees"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Meeting, MeetingType } from "@/types/meeting"
-import type { Staff } from "@/types/staff"
+import type { Employee } from "@/types/employee"
 
 /**
- * Combines selected account-less staff with any free-text addresses into one
+ * Combines selected account-less employee with any free-text addresses into one
  * guest list, de-duplicated by email so a person invited both ways is invited
  * once.
  */
-function mergeGuests(values: MeetingFormValues, staff: Staff[]): { email: string; name?: string | null }[] {
-  const chosen = new Set(values.guest_staff_ids ?? [])
-  const fromStaff = staff
+function mergeGuests(values: MeetingFormValues, employee: Employee[]): { email: string; name?: string | null }[] {
+  const chosen = new Set(values.guest_employee_ids ?? [])
+  const fromEmployees = employee
     .filter((member) => chosen.has(member.id))
     .map((member) => ({ email: member.email, name: member.name }))
 
-  const merged = [...fromStaff, ...parseGuestEmails(values.guest_emails)]
+  const merged = [...fromEmployees, ...parseGuestEmails(values.guest_emails)]
   const seen = new Set<string>()
 
   return merged.filter((guest) => {
@@ -57,7 +57,7 @@ const emptyValues = (meeting?: Meeting | null): MeetingFormValues => {
   location: meeting?.location ?? "",
   reminder_minutes: meeting?.reminder_minutes != null ? String(meeting.reminder_minutes) : "",
   participant_ids: meeting?.participants?.map((participant) => participant.user_id) ?? [],
-  guest_staff_ids: [],
+  guest_employee_ids: [],
   guest_emails: meeting?.guests?.map((guest) => guest.email).join(", ") ?? "",
   }
 }
@@ -66,7 +66,7 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
   const { toast } = useToast()
   const { create, update } = useMeetingMutations(meeting?.id)
   const { data: users } = useWorkspaceUsers()
-  const { data: staff } = useStaff({ status: "active", per_page: 100 })
+  const { data: employee } = useEmployees({ status: "active", per_page: 100 })
   const editing = Boolean(meeting)
   // Computed once: the IANA list is long and never changes during a session.
   const [timezones] = useState(supportedTimezones)
@@ -74,16 +74,16 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
   /*
    * Anyone who can be invited, in one list.
    *
-   * Users become participants and RSVP in-app. Staff without an account cannot
+   * Users become participants and RSVP in-app. Employee without an account cannot
    * sign in, so they are invited as email guests instead — a meeting invitation
    * does not require an account, unlike a task assignment.
    */
   const knownEmails = new Set((users ?? []).map((user) => user.email.toLowerCase()))
-  const people: { kind: "user" | "staff"; id: number; name: string; email: string }[] = [
+  const people: { kind: "user" | "employee"; id: number; name: string; email: string }[] = [
     ...(users ?? []).map((user) => ({ kind: "user" as const, id: user.id, name: user.name, email: user.email })),
-    ...(staff?.data ?? [])
+    ...(employee?.data ?? [])
       .filter((member) => !member.has_account && !knownEmails.has(member.email.toLowerCase()))
-      .map((member) => ({ kind: "staff" as const, id: member.id, name: member.name, email: member.email })),
+      .map((member) => ({ kind: "employee" as const, id: member.id, name: member.name, email: member.email })),
   ]
 
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<MeetingFormValues>({
@@ -112,7 +112,7 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
       location: values.location || null,
       reminder_minutes: values.reminder_minutes ? Number(values.reminder_minutes) : null,
       participant_ids: values.participant_ids ?? [],
-      guests: mergeGuests(values, staff?.data ?? []),
+      guests: mergeGuests(values, employee?.data ?? []),
     }
 
     try {
@@ -200,13 +200,13 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
           <fieldset className="grid gap-2">
             <legend className="text-sm font-medium">Participants</legend>
             {people.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nobody to invite yet. Add staff members first.</p>
+              <p className="text-xs text-muted-foreground">Nobody to invite yet. Add employees first.</p>
             ) : (
               <div className="grid max-h-48 gap-1 overflow-y-auto rounded-lg border p-2">
                 {people.map((person) => (
                   <Controller
                     key={`${person.kind}-${person.id}`}
-                    name={person.kind === "user" ? "participant_ids" : "guest_staff_ids"}
+                    name={person.kind === "user" ? "participant_ids" : "guest_employee_ids"}
                     control={control}
                     render={({ field }) => {
                       const selected = field.value?.includes(person.id) ?? false
@@ -222,7 +222,7 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
                             className="size-4 rounded border"
                           />
                           <span>{person.name}</span>
-                          {person.kind === "staff" && (
+                          {person.kind === "employee" && (
                             <span
                               className="rounded-full bg-muted px-2 py-0.5 text-[0.7rem] text-muted-foreground"
                               title="Invited by email. They get the joining link and can attend and RSVP without signing in."
@@ -240,7 +240,7 @@ export function MeetingFormDialog({ meeting, onClose }: { meeting?: Meeting | nu
             )}
             <p className="text-xs text-muted-foreground">
               Everyone selected is invited and can attend. Guests get the joining link by email and RSVP through a private link, without signing in.
-              Invite them from the Staff page if you also want them to have an account.
+              Invite them from the Employee page if you also want them to have an account.
             </p>
           </fieldset>
 

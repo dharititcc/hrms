@@ -8,7 +8,7 @@ namespace App\Enums;
  */
 enum Module: string
 {
-    case Staff = 'staff';
+    case Employees = 'employees';
     case Attendance = 'attendance';
     case Leave = 'leave';
     case Payroll = 'payroll';

@@ -8,7 +8,7 @@ import { attendanceStatusLabels, attendanceStatusStyles, formatMinutes, workMode
 import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
 import { usePermissions } from "@/hooks/use-permissions"
-import { useStaff } from "@/hooks/use-staff"
+import { useEmployees } from "@/hooks/use-employees"
 import { mapsLink } from "@/services/attendance-service"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
@@ -21,19 +21,19 @@ function currentMonth(): string {
 
 export function AttendanceModule() {
   const [month, setMonth] = useState(currentMonth)
-  const [staffFilter, setStaffFilter] = useState<number | "all">("all")
+  const [employeeFilter, setEmployeeFilter] = useState<number | "all">("all")
 
-  const { can, staffId: myStaffId } = usePermissions()
+  const { can, employeeId: myEmployeeId } = usePermissions()
   const { toast } = useToast()
   const { approve } = useAttendanceMutations()
 
   const seesEveryone = can("attendance.view-all")
   // The employee picker only means anything to someone who can see others.
-  const { data: staff } = useStaff(seesEveryone ? { status: "active", per_page: 100 } : { per_page: 1 })
+  const { data: employee } = useEmployees(seesEveryone ? { status: "active", per_page: 100 } : { per_page: 1 })
 
   const { data, isLoading, isError, refetch, isPlaceholderData } = useAttendance({
     month,
-    staff_id: staffFilter === "all" ? undefined : staffFilter,
+    employee_id: employeeFilter === "all" ? undefined : employeeFilter,
   })
 
   const records = data?.data ?? []
@@ -57,7 +57,7 @@ export function AttendanceModule() {
         </p>
       </div>
 
-      <CheckInCard staffId={myStaffId} />
+      <CheckInCard employeeId={myEmployeeId} />
 
       <OfficeLocations />
 
@@ -77,13 +77,13 @@ export function AttendanceModule() {
           <label className="grid gap-1 text-xs font-medium">
             Employee
             <select
-              value={staffFilter}
-              onChange={(event) => setStaffFilter(event.target.value === "all" ? "all" : Number(event.target.value))}
+              value={employeeFilter}
+              onChange={(event) => setEmployeeFilter(event.target.value === "all" ? "all" : Number(event.target.value))}
               aria-label="Filter by employee"
               className="h-9 rounded-lg border bg-background px-2 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/20"
             >
               <option value="all">Everyone</option>
-              {(staff?.data ?? []).map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
+              {(employee?.data ?? []).map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}
             </select>
           </label>
         )}
@@ -178,7 +178,7 @@ function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; sh
         <span className="font-medium">{new Date(record.work_date).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span>
         <span className="ml-2 text-xs text-muted-foreground">{workModeLabels[record.work_mode]}</span>
       </td>
-      {showEmployee && <td className="px-5 py-4 text-muted-foreground">{record.staff_name ?? "—"}</td>}
+      {showEmployee && <td className="px-5 py-4 text-muted-foreground">{record.employee_name ?? "—"}</td>}
       <td className="px-5 py-4 tabular-nums">{record.check_in ?? "—"}</td>
       <td className="px-5 py-4 tabular-nums">{record.check_out ?? "—"}</td>
       <td className="px-5 py-4 tabular-nums">

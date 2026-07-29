@@ -2,15 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Project;
-use App\Models\Staff;
 use App\Models\Task;
-use App\Models\TaskComment;
 use App\Models\TaskTimeEntry;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
 use App\Notifications\TaskMentionNotification;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -38,10 +37,10 @@ class TaskDetailTest extends TestCase
     /** Invites a staff member and returns their account. */
     private function teammate(User $owner, string $email = 'grace@example.com', string $role = 'member'): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace Hopper', 'email' => $email, 'role' => $role, 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace Hopper', 'email' => $email, 'role' => $role, 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     // --- Comments -------------------------------------------------------

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\Meeting;
 use App\Models\MeetingGuest;
-use App\Models\Staff;
 use App\Models\User;
 use App\Notifications\MeetingChangedNotification;
 use App\Notifications\MeetingInvitationNotification;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -32,10 +32,10 @@ class MeetingApiTest extends TestCase
 
     private function teammate(User $owner, string $email = 'grace@example.com'): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     public function test_a_meeting_can_be_scheduled_with_participants_and_guests(): void

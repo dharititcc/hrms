@@ -20,7 +20,7 @@ import type { Permission } from "@/types/permission"
  */
 const NAV: { href: string; label: string; icon: typeof Users; permission?: Permission }[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/staff", label: "Staff", icon: Users, permission: "staff.view" },
+  { href: "/dashboard/employees", label: "Employees", icon: Users, permission: "employees.view" },
   { href: "/dashboard/attendance", label: "Attendance", icon: CalendarCheck, permission: "attendance.view" },
   { href: "/dashboard/leave", label: "Leave", icon: ClipboardList, permission: "leave.view" },
   { href: "/dashboard/tasks", label: "Tasks", icon: CheckSquare, permission: "tasks.view" },

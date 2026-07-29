@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Announcement;
 use App\Models\Asset;
 use App\Models\Candidate;
+use App\Models\Employee;
 use App\Models\EmployeePayrollProfile;
 use App\Models\Expense;
 use App\Models\JobOpening;
@@ -13,7 +14,6 @@ use App\Models\Meeting;
 use App\Models\PayrollRun;
 use App\Models\Project;
 use App\Models\SalarySlip;
-use App\Models\Staff;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\User;
@@ -39,7 +39,7 @@ final class WorkspaceRecords
             'task' => Task::class,
             'meeting' => Meeting::class,
             'project' => Project::class,
-            'staff' => Staff::class,
+            'employee' => Employee::class,
             'expense' => Expense::class,
             'payroll_run' => PayrollRun::class,
             'salary_slip' => SalarySlip::class,

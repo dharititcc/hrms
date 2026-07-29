@@ -138,7 +138,7 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const download = usePayslipDownload()
   const { toast } = useToast()
 
-  // staff id => component code => amount, as the generator expects it.
+  // employee id => component code => amount, as the generator expects it.
   const [manual, setManual] = useState<Record<number, Record<string, string>>>({})
   const [paying, setPaying] = useState<SalarySlip | null>(null)
 
@@ -204,12 +204,12 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
   const recalculate = async () => {
     const amounts: Record<number, Record<string, number>> = {}
 
-    for (const [staffId, codes] of Object.entries(manual)) {
+    for (const [employeeId, codes] of Object.entries(manual)) {
       const filled = Object.entries(codes)
         .filter(([, value]) => value !== "" && !Number.isNaN(Number(value)))
         .map(([code, value]) => [code, Number(value)] as const)
 
-      if (filled.length > 0) amounts[Number(staffId)] = Object.fromEntries(filled)
+      if (filled.length > 0) amounts[Number(employeeId)] = Object.fromEntries(filled)
     }
 
     try {
@@ -326,7 +326,7 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
         <div className="grid place-items-center rounded-2xl border bg-background p-12 text-center">
           <p className="font-medium">No payslips in this run</p>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            No active employee has a salary set for {run.country}. Set one from the staff list, then recalculate.
+            No active employee has a salary set for {run.country}. Set one from the employee list, then recalculate.
           </p>
         </div>
       ) : (
@@ -337,10 +337,10 @@ function RunDetail({ id, onBack }: { id: number; onBack: () => void }) {
               slip={slip}
               manualCodes={manualCodes}
               editable={canRecalculate}
-              values={manual[slip.staff_id] ?? {}}
+              values={manual[slip.employee_id] ?? {}}
               onChange={(code, value) => setManual((current) => ({
                 ...current,
-                [slip.staff_id]: { ...current[slip.staff_id], [code]: value },
+                [slip.employee_id]: { ...current[slip.employee_id], [code]: value },
               }))}
               onPay={canPay ? () => setPaying(slip) : undefined}
               onDownload={issued && can("payroll.download") ? () => void savePayslip(slip) : undefined}
@@ -378,7 +378,7 @@ function SlipCard({ slip, manualCodes, editable, values, onChange, onPay, onDown
           className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 text-left"
         >
           <div className="min-w-40">
-            <p className="font-medium">{slip.staff_name ?? `Staff #${slip.staff_id}`}</p>
+            <p className="font-medium">{slip.employee_name ?? `Employee #${slip.employee_id}`}</p>
             <p className="mt-0.5 font-mono text-xs text-muted-foreground">{slip.slip_number}</p>
           </div>
           <div className="flex flex-wrap items-center gap-5 text-sm tabular-nums">
@@ -429,7 +429,7 @@ function SlipCard({ slip, manualCodes, editable, values, onChange, onPay, onDown
                           type="number"
                           step="0.01"
                           min="0"
-                          aria-label={`${line.name} for ${slip.staff_name ?? `staff ${slip.staff_id}`}`}
+                          aria-label={`${line.name} for ${slip.employee_name ?? `employee ${slip.employee_id}`}`}
                           placeholder={Number(line.amount).toFixed(2)}
                           value={values[line.code] ?? ""}
                           onChange={(event) => onChange(line.code, event.target.value)}

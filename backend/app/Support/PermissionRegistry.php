@@ -35,7 +35,7 @@ final class PermissionRegistry
             WorkspaceRole::Admin->value => self::ALL,
 
             WorkspaceRole::Manager->value => [
-                Module::Staff->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete, Action::Assign, Action::Export],
+                Module::Employees->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Delete, Action::Assign, Action::Export],
                 Module::Attendance->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Export],
                 Module::Leave->value => [Action::View, Action::ViewAll, Action::Create, Action::Edit, Action::Approve, Action::Export],
                 // Managers run and pay payroll; approval is separate so a
@@ -55,8 +55,8 @@ final class PermissionRegistry
             ],
 
             WorkspaceRole::Employee->value => [
-                // The staff directory is shared; personal modules are not.
-                Module::Staff->value => [Action::View, Action::ViewAll],
+                // The employee directory is shared; personal modules are not.
+                Module::Employees->value => [Action::View, Action::ViewAll],
                 // View without view-all: their own attendance, leave, payslips
                 // and expense claims, never a colleague's.
                 Module::Attendance->value => [Action::View, Action::Create],

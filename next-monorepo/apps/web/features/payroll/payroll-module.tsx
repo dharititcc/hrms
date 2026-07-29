@@ -108,7 +108,7 @@ function SlipList() {
                   {slips.map((slip) => (
                     <tr key={slip.id} className="transition-colors hover:bg-muted/20">
                       <td className="px-5 py-4 font-medium">{slip.slip_number}</td>
-                      <td className="px-5 py-4 text-muted-foreground">{slip.staff_name ?? "—"}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{slip.employee_name ?? "—"}</td>
                       <td className="px-5 py-4 text-muted-foreground">{slip.period ?? "—"}</td>
                       <td className="px-5 py-4 tabular-nums">{slip.currency_symbol}{slip.gross_salary}</td>
                       <td className="px-5 py-4 tabular-nums text-muted-foreground">{slip.currency_symbol}{slip.total_deductions}</td>

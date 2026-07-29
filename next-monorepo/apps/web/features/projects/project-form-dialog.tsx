@@ -10,7 +10,7 @@ import { SelectField } from "@/components/ui/select-field"
 import { projectStatusLabels } from "@/features/projects/labels"
 import { projectSchema, type ProjectFormValues } from "@/features/projects/schemas"
 import { useProjectMutations } from "@/hooks/use-projects"
-import { useStaff } from "@/hooks/use-staff"
+import { useEmployees } from "@/hooks/use-employees"
 import { getApiErrorMessage } from "@/lib/api-error"
 import { useToast } from "@/providers/toast-provider"
 import type { Project, ProjectStatus } from "@/types/project"
@@ -30,9 +30,9 @@ export function ProjectFormDialog({ project, onClose }: { project?: Project | nu
   const { toast } = useToast()
   const { create, update } = useProjectMutations()
   const editing = Boolean(project)
-  // Active staff only — up to 100, which covers the member picker without paging.
-  const { data: staffData } = useStaff({ status: "active", per_page: 100 })
-  const staffOptions = staffData?.data ?? []
+  // Active employee only — up to 100, which covers the member picker without paging.
+  const { data: employeeData } = useEmployees({ status: "active", per_page: 100 })
+  const employeeOptions = employeeData?.data ?? []
 
   const { register, control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
@@ -115,11 +115,11 @@ export function ProjectFormDialog({ project, onClose }: { project?: Project | nu
             render={({ field }) => (
               <fieldset className="grid gap-2">
                 <legend className="text-sm font-medium">Team members</legend>
-                {staffOptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No active staff yet. Add staff members first to assign a team.</p>
+                {employeeOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No active employee yet. Add employees first to assign a team.</p>
                 ) : (
                   <div className="grid max-h-40 gap-1 overflow-y-auto rounded-lg border p-2">
-                    {staffOptions.map((member) => {
+                    {employeeOptions.map((member) => {
                       const selected = field.value?.includes(member.id) ?? false
                       return (
                         <label key={member.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">

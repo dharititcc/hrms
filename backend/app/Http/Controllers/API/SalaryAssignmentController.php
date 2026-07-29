@@ -6,7 +6,7 @@ use App\Enums\Module;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payroll\StoreSalaryAssignmentRequest;
 use App\Http\Resources\SalaryAssignmentResource;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Services\Payroll\SalaryAssignmentService;
 use App\Support\RecordScope;
 use Illuminate\Http\JsonResponse;
@@ -16,25 +16,25 @@ use Illuminate\Support\Carbon;
 /**
  * An employee's salary and its revision history.
  *
- * Lives under the staff resource because a salary belongs to a person, not to
+ * Lives under the employee resource because a salary belongs to a person, not to
  * a payroll run.
  */
 class SalaryAssignmentController extends Controller
 {
     public function __construct(private readonly SalaryAssignmentService $service) {}
 
-    public function index(Request $request, Staff $staff): JsonResponse
+    public function index(Request $request, Employee $employee): JsonResponse
     {
-        $this->authorizeStaff($request, $staff);
+        $this->authorizeEmployee($request, $employee);
 
-        return SalaryAssignmentResource::collection($this->service->history($staff))->response();
+        return SalaryAssignmentResource::collection($this->service->history($employee))->response();
     }
 
-    public function current(Request $request, Staff $staff): JsonResponse
+    public function current(Request $request, Employee $employee): JsonResponse
     {
-        $this->authorizeStaff($request, $staff);
+        $this->authorizeEmployee($request, $employee);
 
-        $assignment = $this->service->current($staff);
+        $assignment = $this->service->current($employee);
 
         return response()->json([
             'data' => $assignment === null
@@ -43,12 +43,12 @@ class SalaryAssignmentController extends Controller
         ]);
     }
 
-    public function store(StoreSalaryAssignmentRequest $request, Staff $staff): JsonResponse
+    public function store(StoreSalaryAssignmentRequest $request, Employee $employee): JsonResponse
     {
-        abort_unless($staff->owner_id === $request->user()->workspaceOwnerId(), 403);
+        abort_unless($employee->owner_id === $request->user()->workspaceOwnerId(), 403);
 
         $assignment = $this->service->assign(
-            $staff,
+            $employee,
             $request->user(),
             [...$request->validated(), 'currency_code' => $request->currencyCode()],
             $this->componentValues($request),
@@ -57,12 +57,12 @@ class SalaryAssignmentController extends Controller
         return (new SalaryAssignmentResource($assignment))->response()->setStatusCode(201);
     }
 
-    public function end(Request $request, Staff $staff): JsonResponse
+    public function end(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless($staff->owner_id === $request->user()->workspaceOwnerId(), 403);
+        abort_unless($employee->owner_id === $request->user()->workspaceOwnerId(), 403);
 
         $validated = $request->validate(['effective_to' => ['required', 'date']]);
-        $assignment = $this->service->current($staff);
+        $assignment = $this->service->current($employee);
 
         abort_if($assignment === null, 404, 'This employee has no active salary.');
 
@@ -75,10 +75,10 @@ class SalaryAssignmentController extends Controller
      * Salary is personal data: without payroll.view-all an employee may see
      * only their own.
      */
-    private function authorizeStaff(Request $request, Staff $staff): void
+    private function authorizeEmployee(Request $request, Employee $employee): void
     {
-        abort_unless($staff->owner_id === $request->user()->workspaceOwnerId(), 403);
-        abort_unless(RecordScope::allows($request->user(), Module::Payroll, $staff->id), 403);
+        abort_unless($employee->owner_id === $request->user()->workspaceOwnerId(), 403);
+        abort_unless(RecordScope::allows($request->user(), Module::Payroll, $employee->id), 403);
     }
 
     /** @return array<int, float> */

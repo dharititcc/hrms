@@ -2,14 +2,14 @@
 
 namespace App\Repositories;
 
-use App\Models\Staff;
+use App\Models\Employee;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class StaffRepository
+class EmployeeRepository
 {
     public function paginateForOwner(int $ownerId, array $filters = []): LengthAwarePaginator
     {
-        return Staff::query()
+        return Employee::query()
             ->where('owner_id', $ownerId)
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $query->where(function ($query) use ($search): void {
@@ -24,25 +24,25 @@ class StaffRepository
             ->withQueryString();
     }
 
-    public function findForOwnerOrFail(int $ownerId, int $staffId): Staff
+    public function findForOwnerOrFail(int $ownerId, int $employeeId): Employee
     {
-        return Staff::query()->where('owner_id', $ownerId)->findOrFail($staffId);
+        return Employee::query()->where('owner_id', $ownerId)->findOrFail($employeeId);
     }
 
-    public function create(int $ownerId, array $attributes): Staff
+    public function create(int $ownerId, array $attributes): Employee
     {
-        return Staff::create([...$attributes, 'owner_id' => $ownerId]);
+        return Employee::create([...$attributes, 'owner_id' => $ownerId]);
     }
 
-    public function update(Staff $staff, array $attributes): Staff
+    public function update(Employee $employee, array $attributes): Employee
     {
-        $staff->update($attributes);
+        $employee->update($attributes);
 
-        return $staff->refresh();
+        return $employee->refresh();
     }
 
-    public function delete(Staff $staff): void
+    public function delete(Employee $employee): void
     {
-        $staff->delete();
+        $employee->delete();
     }
 }

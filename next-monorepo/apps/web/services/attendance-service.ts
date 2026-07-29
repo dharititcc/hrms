@@ -5,7 +5,7 @@ import type {
 } from "@/types/attendance"
 
 export const attendanceService = {
-  async list(filters: { month?: string; staff_id?: number } = {}) {
+  async list(filters: { month?: string; employee_id?: number } = {}) {
     const { data } = await apiClient.get<AttendanceListResponse>("/auth/attendance", { params: filters })
     return data
   },

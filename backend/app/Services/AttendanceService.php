@@ -6,7 +6,7 @@ use App\Enums\AttendanceStatus;
 use App\Enums\WorkMode;
 use App\Models\Attendance;
 use App\Models\AttendanceLocation;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
 use App\Models\WorkShift;
 use Illuminate\Http\Request;
@@ -24,10 +24,10 @@ use Illuminate\Validation\ValidationException;
  */
 class AttendanceService
 {
-    public function checkIn(Staff $staff, User $actor, array $attributes, ?Request $request = null): Attendance
+    public function checkIn(Employee $employee, User $actor, array $attributes, ?Request $request = null): Attendance
     {
         $today = now()->toDateString();
-        $existing = $this->forDate($staff, $today);
+        $existing = $this->forDate($employee, $today);
 
         if ($existing?->check_in !== null) {
             throw ValidationException::withMessages([
@@ -36,19 +36,19 @@ class AttendanceService
         }
 
         $mode = WorkMode::from($attributes['work_mode'] ?? WorkMode::Office->value);
-        $shift = $this->shiftFor($staff->owner_id, $attributes['work_shift_id'] ?? null);
+        $shift = $this->shiftFor($employee->owner_id, $attributes['work_shift_id'] ?? null);
 
         // Fetched once so "outside every office" can be told apart from "no
         // offices defined": the first is suspicious, the second is not.
-        $offices = AttendanceLocation::query()->where('owner_id', $staff->owner_id)->active()->get();
+        $offices = AttendanceLocation::query()->where('owner_id', $employee->owner_id)->active()->get();
         $location = $this->resolveLocation($offices, $mode, $attributes);
 
         $now = now();
 
-        return DB::transaction(function () use ($staff, $attributes, $request, $mode, $shift, $location, $offices, $today, $now): Attendance {
+        return DB::transaction(function () use ($employee, $attributes, $request, $mode, $shift, $location, $offices, $today, $now): Attendance {
             $attendance = Attendance::firstOrNew([
-                'owner_id' => $staff->owner_id,
-                'staff_id' => $staff->id,
+                'owner_id' => $employee->owner_id,
+                'staff_id' => $employee->id,
                 'work_date' => $today,
             ]);
 
@@ -121,10 +121,10 @@ class AttendanceService
         return $attendance->refresh();
     }
 
-    public function forDate(Staff $staff, string $date): ?Attendance
+    public function forDate(Employee $employee, string $date): ?Attendance
     {
         return Attendance::query()
-            ->where('staff_id', $staff->id)
+            ->where('staff_id', $employee->id)
             ->whereDate('work_date', $date)
             ->first();
     }

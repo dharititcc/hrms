@@ -25,7 +25,7 @@ class GeneratePayrollRequest extends FormRequest
             'pay_date' => ['nullable', 'date', 'after_or_equal:period_end'],
             'notes' => ['nullable', 'string', 'max:2000'],
 
-            // Progressive taxes and one-off figures, keyed by staff id then by
+            // Progressive taxes and one-off figures, keyed by employee id then by
             // component code: {"12": {"TDS": 3200}}
             'manual_amounts' => ['nullable', 'array'],
             'manual_amounts.*' => ['array'],
@@ -38,8 +38,8 @@ class GeneratePayrollRequest extends FormRequest
     {
         $amounts = [];
 
-        foreach ((array) $this->input('manual_amounts', []) as $staffId => $components) {
-            $amounts[(int) $staffId] = array_map(fn ($value) => (float) $value, (array) $components);
+        foreach ((array) $this->input('manual_amounts', []) as $employeeId => $components) {
+            $amounts[(int) $employeeId] = array_map(fn ($value) => (float) $value, (array) $components);
         }
 
         return $amounts;

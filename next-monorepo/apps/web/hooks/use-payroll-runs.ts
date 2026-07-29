@@ -86,59 +86,59 @@ export function useSlipPaymentMutations(slipId: number, runId: number) {
   return { record, reverse }
 }
 
-export function useSalary(staffId: number | null) {
+export function useSalary(employeeId: number | null) {
   const current = useQuery({
-    queryKey: ["salary", staffId],
-    queryFn: () => payrollService.currentSalary(staffId as number),
-    enabled: staffId !== null,
+    queryKey: ["salary", employeeId],
+    queryFn: () => payrollService.currentSalary(employeeId as number),
+    enabled: employeeId !== null,
   })
   const history = useQuery({
-    queryKey: ["salary-history", staffId],
-    queryFn: () => payrollService.salaryHistory(staffId as number),
-    enabled: staffId !== null,
+    queryKey: ["salary-history", employeeId],
+    queryFn: () => payrollService.salaryHistory(employeeId as number),
+    enabled: employeeId !== null,
   })
 
   return { current, history }
 }
 
-export function useSalaryMutations(staffId: number | null) {
+export function useSalaryMutations(employeeId: number | null) {
   const queryClient = useQueryClient()
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["salary", staffId] })
-    queryClient.invalidateQueries({ queryKey: ["salary-history", staffId] })
+    queryClient.invalidateQueries({ queryKey: ["salary", employeeId] })
+    queryClient.invalidateQueries({ queryKey: ["salary-history", employeeId] })
     // Assignment counts decide whether a structure can be deleted.
     queryClient.invalidateQueries({ queryKey: ["salary-structures"] })
   }
 
   const assign = useMutation({
-    mutationFn: (input: SalaryAssignmentInput) => payrollService.assignSalary(staffId as number, input),
+    mutationFn: (input: SalaryAssignmentInput) => payrollService.assignSalary(employeeId as number, input),
     onSuccess: refresh,
   })
   const end = useMutation({
-    mutationFn: (effectiveTo: string) => payrollService.endSalary(staffId as number, effectiveTo),
+    mutationFn: (effectiveTo: string) => payrollService.endSalary(employeeId as number, effectiveTo),
     onSuccess: refresh,
   })
 
   return { assign, end }
 }
 
-export function usePayrollProfile(staffId: number | null) {
+export function usePayrollProfile(employeeId: number | null) {
   return useQuery({
-    queryKey: ["payroll-profile", staffId],
-    queryFn: () => payrollService.profile(staffId as number),
-    enabled: staffId !== null,
+    queryKey: ["payroll-profile", employeeId],
+    queryFn: () => payrollService.profile(employeeId as number),
+    enabled: employeeId !== null,
   })
 }
 
-export function usePayrollProfileMutations(staffId: number | null) {
+export function usePayrollProfileMutations(employeeId: number | null) {
   const queryClient = useQueryClient()
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["payroll-profile", staffId] })
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["payroll-profile", employeeId] })
 
   const save = useMutation({
-    mutationFn: (input: PayrollProfileInput) => payrollService.saveProfile(staffId as number, input),
+    mutationFn: (input: PayrollProfileInput) => payrollService.saveProfile(employeeId as number, input),
     onSuccess: refresh,
   })
-  const remove = useMutation({ mutationFn: () => payrollService.removeProfile(staffId as number), onSuccess: refresh })
+  const remove = useMutation({ mutationFn: () => payrollService.removeProfile(employeeId as number), onSuccess: refresh })
 
   return { save, remove }
 }

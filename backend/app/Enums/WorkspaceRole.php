@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * A user's role within a workspace. Derived from their staff record's role,
+ * A user's role within a workspace. Derived from their employee record's role,
  * or Admin when they are the workspace owner.
  */
 enum WorkspaceRole: string
@@ -13,14 +13,14 @@ enum WorkspaceRole: string
     case Employee = 'employee';
     case Client = 'client';
 
-    /** Staff roles are the editable source of truth; map them onto workspace roles. */
-    public static function fromStaffRole(StaffRole $role): self
+    /** Employee roles are the editable source of truth; map them onto workspace roles. */
+    public static function fromEmployeeRole(EmployeeRole $role): self
     {
         return match ($role) {
-            StaffRole::Admin => self::Admin,
-            StaffRole::Manager => self::Manager,
-            StaffRole::Member => self::Employee,
-            StaffRole::Client => self::Client,
+            EmployeeRole::Admin => self::Admin,
+            EmployeeRole::Manager => self::Manager,
+            EmployeeRole::Member => self::Employee,
+            EmployeeRole::Client => self::Client,
         };
     }
 }

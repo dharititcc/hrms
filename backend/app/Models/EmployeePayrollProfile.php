@@ -49,9 +49,9 @@ class EmployeePayrollProfile extends Model
         return ['account_number', 'iban', 'tax_identifier'];
     }
 
-    public function staff(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(Staff::class);
+        return $this->belongsTo(Employee::class, 'staff_id');
     }
 
     public function owner(): BelongsTo

@@ -6,13 +6,14 @@ use App\Enums\PayrollCountry;
 use App\Enums\SalaryAssignmentStatus;
 use App\Enums\SalaryCalculation;
 use App\Enums\SalaryComponentType;
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\PayrollRun;
 use App\Models\SalaryComponent;
 use App\Models\SalarySlip;
 use App\Models\SalaryStructure;
-use App\Models\Staff;
 use App\Models\User;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -49,9 +50,9 @@ class PayrollGenerationTest extends TestCase
         ]);
     }
 
-    private function staff(string $email = 'grace@example.com'): Staff
+    private function staff(string $email = 'grace@example.com'): Employee
     {
-        return Staff::create([
+        return Employee::create([
             'owner_id' => $this->owner->id, 'name' => 'Grace Hopper',
             'email' => $email, 'role' => 'member', 'status' => 'active',
         ]);
@@ -72,28 +73,28 @@ class PayrollGenerationTest extends TestCase
 
     public function test_a_salary_can_be_assigned_and_read_back(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
 
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))
             ->assertCreated()
             ->assertJsonPath('data.basic_salary', '50000.00')
             // Currency follows the country when not stated.
             ->assertJsonPath('data.currency_code', 'INR')
             ->assertJsonPath('data.status', 'active');
 
-        $this->getJson("/api/auth/staff/{$staff->id}/salary")
+        $this->getJson("/api/auth/employees/{$employee->id}/salary")
             ->assertOk()
             ->assertJsonPath('data.basic_salary', '50000.00');
     }
 
     public function test_a_revision_closes_the_previous_salary_without_gap_or_overlap(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
 
-        $first = $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->json('data.id');
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(60000, '2026-07-01', ['revision_reason' => 'Annual review']))
+        $first = $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->json('data.id');
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(60000, '2026-07-01', ['revision_reason' => 'Annual review']))
             ->assertCreated()
             ->assertJsonPath('data.supersedes_id', $first);
 
@@ -104,44 +105,44 @@ class PayrollGenerationTest extends TestCase
         $this->assertSame(SalaryAssignmentStatus::Superseded, $previous->status);
 
         // Both revisions remain as history.
-        $this->getJson("/api/auth/staff/{$staff->id}/salary/history")->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson("/api/auth/employees/{$employee->id}/salary/history")->assertOk()->assertJsonCount(2, 'data');
     }
 
     public function test_a_revision_cannot_start_before_the_current_salary(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
 
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-06-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-06-01'))->assertCreated();
 
         // Backdating would leave two rows claiming the same days.
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(60000, '2026-03-01'))
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(60000, '2026-03-01'))
             ->assertStatus(422)
             ->assertJsonValidationErrors('effective_from');
     }
 
     public function test_employees_cannot_read_a_colleagues_salary(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         $colleague = $this->staff('colleague@example.com');
-        app(\App\Services\StaffInvitationService::class)->invite($staff);
+        app(EmployeeInvitationService::class)->invite($employee);
 
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$colleague->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$colleague->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
 
-        Sanctum::actingAs($staff->refresh()->user);
-        $this->getJson("/api/auth/staff/{$colleague->id}/salary")->assertForbidden();
+        Sanctum::actingAs($employee->refresh()->user);
+        $this->getJson("/api/auth/employees/{$colleague->id}/salary")->assertForbidden();
         // Their own is fine.
-        $this->getJson("/api/auth/staff/{$staff->id}/salary")->assertOk();
+        $this->getJson("/api/auth/employees/{$employee->id}/salary")->assertOk();
     }
 
     // --- Run generation --------------------------------------------------
 
     public function test_generating_a_run_produces_slips_with_a_frozen_breakdown(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
 
         $run = $this->postJson('/api/auth/payroll-runs', [
             'title' => 'July 2026', 'country' => 'IN',
@@ -164,9 +165,9 @@ class PayrollGenerationTest extends TestCase
 
     public function test_a_slip_keeps_its_figures_when_the_structure_changes_later(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
         $this->postJson('/api/auth/payroll-runs', ['title' => 'July', 'country' => 'IN', 'period_start' => '2026-07-01', 'period_end' => '2026-07-31'])->assertCreated();
 
         // Change HRA after the slip was issued.
@@ -181,11 +182,11 @@ class PayrollGenerationTest extends TestCase
 
     public function test_the_salary_in_force_at_period_end_is_the_one_used(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
 
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(40000, '2026-01-01'))->assertCreated();
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(80000, '2026-07-15'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(40000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(80000, '2026-07-15'))->assertCreated();
 
         $this->postJson('/api/auth/payroll-runs', ['title' => 'July', 'country' => 'IN', 'period_start' => '2026-07-01', 'period_end' => '2026-07-31'])
             ->assertCreated()
@@ -195,7 +196,7 @@ class PayrollGenerationTest extends TestCase
 
     public function test_manual_amounts_are_applied_per_employee(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         SalaryComponent::create([
             'owner_id' => $this->owner->id, 'salary_structure_id' => $this->structure->id,
             'code' => 'TDS', 'name' => 'Income Tax', 'type' => SalaryComponentType::Deduction,
@@ -203,12 +204,12 @@ class PayrollGenerationTest extends TestCase
         ]);
 
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
 
         $this->postJson('/api/auth/payroll-runs', [
             'title' => 'July', 'country' => 'IN',
             'period_start' => '2026-07-01', 'period_end' => '2026-07-31',
-            'manual_amounts' => [$staff->id => ['TDS' => 4500]],
+            'manual_amounts' => [$employee->id => ['TDS' => 4500]],
         ])->assertCreated()
             // PF 6,000 + TDS 4,500
             ->assertJsonPath('data.total_deductions', '10500.00');
@@ -220,8 +221,8 @@ class PayrollGenerationTest extends TestCase
         $this->staff('nosalary@example.com');
         Sanctum::actingAs($this->owner);
 
-        $withSalary = Staff::first();
-        $this->postJson("/api/auth/staff/{$withSalary->id}/salary", $this->salaryPayload(30000, '2026-01-01'))->assertCreated();
+        $withSalary = Employee::first();
+        $this->postJson("/api/auth/employees/{$withSalary->id}/salary", $this->salaryPayload(30000, '2026-01-01'))->assertCreated();
 
         $this->postJson('/api/auth/payroll-runs', ['title' => 'July', 'country' => 'IN', 'period_start' => '2026-07-01', 'period_end' => '2026-07-31'])
             ->assertCreated()
@@ -230,9 +231,9 @@ class PayrollGenerationTest extends TestCase
 
     public function test_a_draft_run_can_be_regenerated_but_an_approved_one_cannot(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
 
         $runId = $this->postJson('/api/auth/payroll-runs', ['title' => 'July', 'country' => 'IN', 'period_start' => '2026-07-01', 'period_end' => '2026-07-31'])->json('data.id');
 
@@ -251,9 +252,9 @@ class PayrollGenerationTest extends TestCase
 
     public function test_runs_are_scoped_to_the_workspace(): void
     {
-        $staff = $this->staff();
+        $employee = $this->staff();
         Sanctum::actingAs($this->owner);
-        $this->postJson("/api/auth/staff/{$staff->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/salary", $this->salaryPayload(50000, '2026-01-01'))->assertCreated();
         $runId = $this->postJson('/api/auth/payroll-runs', ['title' => 'July', 'country' => 'IN', 'period_start' => '2026-07-01', 'period_end' => '2026-07-31'])->json('data.id');
 
         Sanctum::actingAs(User::factory()->create());

@@ -65,7 +65,7 @@ class Task extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /** The record this task hangs off, e.g. a project or a staff member. */
+    /** The record this task hangs off, e.g. a project or a employee. */
     public function related(): MorphTo
     {
         return $this->morphTo('related');

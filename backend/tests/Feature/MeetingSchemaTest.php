@@ -12,6 +12,7 @@ use App\Models\MeetingParticipant;
 use App\Models\Tag;
 use App\Models\User;
 use App\Services\Meetings\MeetingLinkProvider;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
@@ -65,7 +66,7 @@ class MeetingSchemaTest extends TestCase
         $this->assertTrue($meeting->participantUsers->first()->is($attendee));
 
         // The unique constraint prevents inviting the same person twice.
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
         MeetingParticipant::create(['meeting_id' => $meeting->id, 'user_id' => $attendee->id]);
     }
 

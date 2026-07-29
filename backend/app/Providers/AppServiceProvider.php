@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
-use App\Support\PermissionRegistry;
 use App\Services\Meetings\ManualMeetingLinkProvider;
 use App\Services\Meetings\MeetingLinkProvider;
+use App\Support\PermissionRegistry;
 use App\Support\WorkspaceRecords;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;

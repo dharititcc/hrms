@@ -17,7 +17,7 @@ use App\Models\Meeting;
 use App\Models\PayrollRun;
 use App\Models\Project;
 use App\Models\SalarySlip;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\Task;
 use App\Models\User;
 
@@ -25,7 +25,7 @@ use App\Models\User;
  * Workspace-wide counts for the dashboard.
  *
  * Every query is scoped to the caller's workspace, and "mine" figures use the
- * caller's own user id rather than the workspace owner, so an invited staff
+ * caller's own user id rather than the workspace owner, so an invited employees
  * member sees their own workload.
  */
 class DashboardService
@@ -36,14 +36,14 @@ class DashboardService
         $today = now()->toDateString();
 
         // Each section is omitted rather than zeroed when the caller lacks
-        // permission, so a Client is never shown staff or project figures.
+        // permission, so a Client is never shown employee or project figures.
         return array_filter([
             'tasks' => $user->hasPermission(Module::Tasks, Action::View) ? $this->taskStats($ownerId, $user, $today) : null,
             'meetings' => $user->hasPermission(Module::Meetings, Action::View) ? $this->meetingStats($ownerId, $user) : null,
             'attendance' => $user->hasPermission(Module::Attendance, Action::View) ? $this->attendanceStats($ownerId, $user, $today) : null,
             'leave' => $user->hasPermission(Module::Leave, Action::View) ? $this->leaveStats($ownerId, $user) : null,
             'payroll' => $user->hasPermission(Module::Payroll, Action::View) ? $this->payrollStats($ownerId, $user) : null,
-            'people' => $user->hasPermission(Module::Staff, Action::View) ? $this->peopleStats($ownerId) : null,
+            'people' => $user->hasPermission(Module::Employees, Action::View) ? $this->peopleStats($ownerId) : null,
             'projects' => $user->hasPermission(Module::Projects, Action::View) ? $this->projectStats($ownerId) : null,
             'recent_activity' => $user->hasPermission(Module::Activity, Action::View) ? $this->recentActivity($ownerId) : null,
         ], fn ($section) => $section !== null);
@@ -53,14 +53,14 @@ class DashboardService
      * Whether the caller has checked in, and — for anyone who can see the whole
      * team — how the day looks across it.
      *
-     * The workspace owner has no staff record, so "mine" is simply absent for
+     * The workspace owner has no employee record, so "mine" is simply absent for
      * them rather than being faked against somebody else's row.
      */
     private function attendanceStats(int $ownerId, User $user, string $today): array
     {
-        $staffId = $user->staffId();
-        $mine = $staffId === null ? null : Attendance::query()
-            ->where('staff_id', $staffId)
+        $employeeId = $user->employeeId();
+        $mine = $employeeId === null ? null : Attendance::query()
+            ->where('staff_id', $employeeId)
             ->whereDate('work_date', $today)
             ->first();
 
@@ -80,18 +80,18 @@ class DashboardService
             ->where('owner_id', $ownerId)
             ->whereDate('work_date', $today);
 
-        $activeStaff = Staff::query()->where('owner_id', $ownerId)->where('status', 'active')->count();
+        $activeEmployees = Employee::query()->where('owner_id', $ownerId)->where('status', 'active')->count();
         $present = (clone $todays)->whereIn('status', [AttendanceStatus::Present->value, AttendanceStatus::Late->value])->count();
 
         return [
             ...$stats,
-            'active_staff' => $activeStaff,
+            'active_employees' => $activeEmployees,
             'present_today' => $present,
             'late_today' => (clone $todays)->where('status', AttendanceStatus::Late->value)->count(),
             'on_leave_today' => (clone $todays)->where('status', AttendanceStatus::OnLeave->value)->count(),
             // Nobody has recorded anything for them yet, which is not the same
             // as being marked absent.
-            'not_recorded' => max(0, $activeStaff - (clone $todays)->count()),
+            'not_recorded' => max(0, $activeEmployees - (clone $todays)->count()),
             // Not limited to today: an unapproved record from last week is the
             // one more likely to have been forgotten.
             'awaiting_approval' => $user->hasPermission(Module::Attendance, Action::Edit)
@@ -110,17 +110,17 @@ class DashboardService
      */
     private function leaveStats(int $ownerId, User $user): array
     {
-        $staffId = $user->staffId();
+        $employeeId = $user->employeeId();
 
         $stats = ['balances' => [], 'my_pending' => 0];
 
-        if ($staffId !== null) {
+        if ($employeeId !== null) {
             $stats['my_pending'] = LeaveRequest::query()
-                ->where('staff_id', $staffId)
+                ->where('staff_id', $employeeId)
                 ->where('status', LeaveRequestStatus::Pending)
                 ->count();
 
-            $stats['balances'] = $this->leaveBalances($ownerId, $staffId);
+            $stats['balances'] = $this->leaveBalances($ownerId, $employeeId);
         }
 
         if ($user->hasPermission(Module::Leave, Action::Approve)) {
@@ -143,7 +143,7 @@ class DashboardService
      *
      * @return list<array<string, mixed>>
      */
-    private function leaveBalances(int $ownerId, int $staffId): array
+    private function leaveBalances(int $ownerId, int $employeeId): array
     {
         $types = LeaveType::query()->where('owner_id', $ownerId)->where('is_active', true)->get();
 
@@ -154,7 +154,7 @@ class DashboardService
         $yearStart = now()->startOfYear();
 
         $taken = LeaveRequest::query()
-            ->where('staff_id', $staffId)
+            ->where('staff_id', $employeeId)
             ->where('status', LeaveRequestStatus::Approved)
             ->whereDate('start_date', '>=', $yearStart->toDateString())
             ->get()
@@ -182,10 +182,10 @@ class DashboardService
      */
     private function payrollStats(int $ownerId, User $user): array
     {
-        $staffId = $user->staffId();
+        $employeeId = $user->employeeId();
 
-        $latest = $staffId === null ? null : SalarySlip::query()
-            ->where('staff_id', $staffId)
+        $latest = $employeeId === null ? null : SalarySlip::query()
+            ->where('staff_id', $employeeId)
             ->whereHas('run', fn ($query) => $query->whereIn('status', [
                 PayrollRunStatus::Approved->value, PayrollRunStatus::Paid->value,
             ]))
@@ -289,13 +289,13 @@ class DashboardService
 
     private function peopleStats(int $ownerId): array
     {
-        $staff = Staff::query()->where('owner_id', $ownerId);
+        $employees = Employee::query()->where('owner_id', $ownerId);
 
         return [
-            'staff' => (clone $staff)->count(),
-            'active' => (clone $staff)->where('status', 'active')->count(),
-            // Staff who can sign in, and so can be assigned work.
-            'with_accounts' => (clone $staff)->whereNotNull('user_id')->count(),
+            'employees' => (clone $employees)->count(),
+            'active' => (clone $employees)->where('status', 'active')->count(),
+            // Employee who can sign in, and so can be assigned work.
+            'with_accounts' => (clone $employees)->whereNotNull('user_id')->count(),
         ];
     }
 

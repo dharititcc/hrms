@@ -21,8 +21,8 @@ class PayrollProfileResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'staff_id' => $this->staff_id,
-            'staff_name' => $this->whenLoaded('staff', fn () => $this->staff?->name),
+            'employee_id' => $this->staff_id,
+            'employee_name' => $this->whenLoaded('employee', fn () => $this->employee?->name),
 
             'country' => $this->country->value,
             'country_label' => $this->country->label(),

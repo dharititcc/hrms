@@ -35,14 +35,14 @@ type ProfileFormValues = z.infer<typeof profileSchema>
  * alone keeps what is stored, and typing replaces it. That is also why they
  * are not sent at all unless touched.
  */
-export function PayrollProfileForm({ staffId, staffName, canEdit }: {
-  staffId: number
-  staffName: string
+export function PayrollProfileForm({ employeeId, employeeName, canEdit }: {
+  employeeId: number
+  employeeName: string
   canEdit: boolean
 }) {
-  const { data: profile, isLoading } = usePayrollProfile(staffId)
+  const { data: profile, isLoading } = usePayrollProfile(employeeId)
   const { data: structureData } = useSalaryStructures()
-  const { save } = usePayrollProfileMutations(staffId)
+  const { save } = usePayrollProfileMutations(employeeId)
   const { toast } = useToast()
 
   const countries = structureData?.meta.countries ?? []
@@ -54,7 +54,7 @@ export function PayrollProfileForm({ staffId, staffName, canEdit }: {
       // Remount once the stored profile arrives, so defaults come from it.
       key={profile?.id ?? "new"}
       profile={profile ?? null}
-      staffName={staffName}
+      employeeName={employeeName}
       countries={countries}
       canEdit={canEdit}
       onSave={async (input: PayrollProfileInput) => {
@@ -70,9 +70,9 @@ export function PayrollProfileForm({ staffId, staffName, canEdit }: {
   )
 }
 
-function Form({ profile, staffName, countries, canEdit, onSave, saving }: {
+function Form({ profile, employeeName, countries, canEdit, onSave, saving }: {
   profile: PayrollProfile | null
-  staffName: string
+  employeeName: string
   countries: { value: string; label: string; currency_code: string }[]
   canEdit: boolean
   onSave: (input: PayrollProfileInput) => Promise<void>
@@ -147,7 +147,7 @@ function Form({ profile, staffName, countries, canEdit, onSave, saving }: {
       {profile && !profile.is_payable && (
         <p className="text-xs text-muted-foreground">
           A payslip can still be generated, but there is no account to send the money to. An account holder name and either an account
-          number or an IBAN are what make {staffName} payable.
+          number or an IBAN are what make {employeeName} payable.
         </p>
       )}
 
@@ -164,7 +164,7 @@ function Form({ profile, staffName, countries, canEdit, onSave, saving }: {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Bank name" placeholder="State Bank" readOnly={!canEdit} error={errors.bank_name?.message} {...register("bank_name")} />
-        <FormField label="Account holder" placeholder={staffName} readOnly={!canEdit} error={errors.account_holder_name?.message} {...register("account_holder_name")} />
+        <FormField label="Account holder" placeholder={employeeName} readOnly={!canEdit} error={errors.account_holder_name?.message} {...register("account_holder_name")} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

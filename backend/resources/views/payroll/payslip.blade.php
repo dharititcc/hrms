@@ -53,8 +53,8 @@
     <tr>
         <td width="50%">
             <div class="muted">Employee</div>
-            <div><strong>{{ $slip->staff?->name ?? '—' }}</strong></div>
-            <div class="muted">{{ $slip->staff?->email }}</div>
+            <div><strong>{{ $slip->employee?->name ?? '—' }}</strong></div>
+            <div class="muted">{{ $slip->employee?->email }}</div>
         </td>
         <td width="50%">
             <div class="muted">Pay date</div>

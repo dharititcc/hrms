@@ -18,8 +18,8 @@ class SalarySlipResource extends JsonResource
             'period_start' => $this->whenLoaded('run', fn () => $this->run?->period_start?->toDateString()),
             'period_end' => $this->whenLoaded('run', fn () => $this->run?->period_end?->toDateString()),
 
-            'staff_id' => $this->staff_id,
-            'staff_name' => $this->whenLoaded('staff', fn () => $this->staff?->name),
+            'employee_id' => $this->staff_id,
+            'employee_name' => $this->whenLoaded('employee', fn () => $this->employee?->name),
 
             'country' => $this->country->value,
             'currency_code' => $this->currency_code,

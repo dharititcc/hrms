@@ -4,17 +4,17 @@ namespace Tests\Feature;
 
 use App\Enums\Action;
 use App\Enums\Module;
-use App\Enums\WorkspaceRole;
-use App\Models\Expense;
 use App\Enums\PayrollCountry;
+use App\Enums\WorkspaceRole;
+use App\Models\Employee;
+use App\Models\Expense;
 use App\Models\PayrollRun;
 use App\Models\SalarySlip;
-use App\Models\Staff;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Notifications\EmployeeInvitationNotification;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
-use App\Notifications\StaffInvitationNotification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -24,9 +24,9 @@ class WorkspaceAccessTest extends TestCase
 
     private int $otherSlipId = 0;
 
-    private function staffFor(User $owner, string $role = 'member', string $email = 'member@example.com'): Staff
+    private function staffFor(User $owner, string $role = 'member', string $email = 'member@example.com'): Employee
     {
-        return Staff::create([
+        return Employee::create([
             'owner_id' => $owner->id,
             'name' => 'Grace Hopper',
             'email' => $email,
@@ -35,7 +35,7 @@ class WorkspaceAccessTest extends TestCase
         ]);
     }
 
-    private function payslipFor(User $owner, ?int $staffId): SalarySlip
+    private function payslipFor(User $owner, ?int $employeeId): SalarySlip
     {
         $run = PayrollRun::create([
             'owner_id' => $owner->id,
@@ -49,7 +49,7 @@ class WorkspaceAccessTest extends TestCase
         return SalarySlip::create([
             'owner_id' => $owner->id,
             'payroll_run_id' => $run->id,
-            'staff_id' => $staffId,
+            'staff_id' => $employeeId,
             'slip_number' => 'SLIP-'.uniqid(),
             'country' => PayrollCountry::India,
             'currency_code' => 'INR',
@@ -60,11 +60,11 @@ class WorkspaceAccessTest extends TestCase
     }
 
     /** Invites the staff member and returns their new login account. */
-    private function invite(Staff $staff): User
+    private function invite(Employee $employee): User
     {
-        app(StaffInvitationService::class)->invite($staff);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     public function test_inviting_staff_creates_a_linked_account_and_notifies_them(): void
@@ -72,24 +72,24 @@ class WorkspaceAccessTest extends TestCase
         Notification::fake();
 
         $owner = User::factory()->create();
-        $staff = $this->staffFor($owner);
+        $employee = $this->staffFor($owner);
         Sanctum::actingAs($owner);
 
-        $this->postJson("/api/auth/staff/{$staff->id}/invite")->assertCreated();
+        $this->postJson("/api/auth/employees/{$employee->id}/invite")->assertCreated();
 
-        $staff->refresh();
-        $this->assertNotNull($staff->user_id);
-        $this->assertSame('member@example.com', $staff->user->email);
+        $employee->refresh();
+        $this->assertNotNull($employee->user_id);
+        $this->assertSame('member@example.com', $employee->user->email);
 
-        Notification::assertSentTo($staff->user, StaffInvitationNotification::class);
+        Notification::assertSentTo($employee->user, EmployeeInvitationNotification::class);
     }
 
     public function test_invited_staff_see_the_owners_workspace_not_their_own(): void
     {
         $owner = User::factory()->create();
-        $staff = $this->staffFor($owner);
+        $employee = $this->staffFor($owner);
         $this->staffFor($owner, 'manager', 'colleague@example.com');
-        $staffUser = $this->invite($staff);
+        $staffUser = $this->invite($employee);
 
         // The staff-user's own id is not the workspace id; scoping must follow
         // their staff record's owner, or they would see an empty workspace.
@@ -97,7 +97,7 @@ class WorkspaceAccessTest extends TestCase
         $this->assertSame($owner->id, $staffUser->workspaceOwnerId());
 
         Sanctum::actingAs($staffUser);
-        $this->getJson('/api/auth/staff')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/auth/employees')->assertOk()->assertJsonCount(2, 'data');
     }
 
     public function test_workspace_owner_is_admin_and_staff_roles_map_to_workspace_roles(): void
@@ -126,18 +126,18 @@ class WorkspaceAccessTest extends TestCase
         // The whole point of resource scoping: an employee may edit a task but
         // that grant says nothing about staff records or payroll.
         $this->assertTrue($employee->hasPermission(Module::Tasks, Action::Edit));
-        $this->assertFalse($employee->hasPermission(Module::Staff, Action::Edit));
+        $this->assertFalse($employee->hasPermission(Module::Employees, Action::Edit));
         // They may read their own payslip but not the workspace's payroll.
         $this->assertTrue($employee->hasPermission(Module::Payroll, Action::View));
         $this->assertFalse($employee->hasPermission(Module::Payroll, Action::ViewAll));
 
         Sanctum::actingAs($employee);
-        $this->deleteJson("/api/auth/staff/{$target->id}")->assertForbidden();
+        $this->deleteJson("/api/auth/employees/{$target->id}")->assertForbidden();
 
         // Clients are read-only apart from commenting, and see no staff at all.
         Sanctum::actingAs($client);
-        $this->getJson('/api/auth/staff')->assertForbidden();
-        $this->postJson('/api/auth/staff', [
+        $this->getJson('/api/auth/employees')->assertForbidden();
+        $this->postJson('/api/auth/employees', [
             'name' => 'New person',
             'email' => 'new@example.com',
             'role' => 'member',
@@ -164,7 +164,7 @@ class WorkspaceAccessTest extends TestCase
         ]);
 
         // Two payslips: the employee's own, and a colleague's.
-        $ownPayslip = $this->payslipFor($owner, $employee->staffId());
+        $ownPayslip = $this->payslipFor($owner, $employee->employeeId());
         $this->otherSlipId = $this->payslipFor($owner, $this->staffFor($owner, 'member', 'other@example.com')->id)->id;
 
         Sanctum::actingAs($employee);
@@ -211,11 +211,11 @@ class WorkspaceAccessTest extends TestCase
 
         // Both owners are Admins holding every permission; that must never let one
         // reach the other's records.
-        $this->assertTrue($ownerA->hasPermission(Module::Staff, Action::View));
+        $this->assertTrue($ownerA->hasPermission(Module::Employees, Action::View));
 
         Sanctum::actingAs($ownerA);
-        $this->getJson("/api/auth/staff/{$staffOfB->id}")->assertForbidden();
-        $this->getJson('/api/auth/staff')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/auth/employees/{$staffOfB->id}")->assertForbidden();
+        $this->getJson('/api/auth/employees')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_an_account_cannot_be_invited_into_two_workspaces(): void
@@ -227,6 +227,6 @@ class WorkspaceAccessTest extends TestCase
         $duplicate = $this->staffFor($ownerB, 'member', 'shared@example.com');
 
         Sanctum::actingAs($ownerB);
-        $this->postJson("/api/auth/staff/{$duplicate->id}/invite")->assertStatus(422);
+        $this->postJson("/api/auth/employees/{$duplicate->id}/invite")->assertStatus(422);
     }
 }

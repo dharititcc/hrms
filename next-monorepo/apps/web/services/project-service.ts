@@ -48,7 +48,7 @@ export const projectService = {
     const { data } = await apiClient.patch<{ data: ProjectTask }>(`/auth/tasks/${taskId}/${archived ? "archive" : "restore"}`)
     return data.data
   },
-  /** Users who can be assigned work: the owner plus invited staff. */
+  /** Users who can be assigned work: the owner plus invited employee. */
   async workspaceUsers() {
     const { data } = await apiClient.get<{ data: WorkspaceUser[] }>("/auth/workspace/users")
     return data.data

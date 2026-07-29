@@ -21,12 +21,12 @@ export function QuickActions({ attendance, canCheckIn }: {
   attendance: DashboardStats["attendance"]
   canCheckIn: boolean
 }) {
-  const { can, staffId } = usePermissions()
+  const { can, employeeId } = usePermissions()
   const { checkIn, checkOut } = useAttendanceMutations()
   const { toast } = useToast()
 
-  // The workspace owner has no staff record, so there is nothing to check in.
-  const showAttendance = canCheckIn && staffId !== null && attendance !== undefined
+  // The workspace owner has no employee record, so there is nothing to check in.
+  const showAttendance = canCheckIn && employeeId !== null && attendance !== undefined
   const done = attendance?.checked_out === true
   // Either direction leaves the button busy, so they share one label.
   const pending = checkIn.isPending || checkOut.isPending
@@ -40,7 +40,7 @@ export function QuickActions({ attendance, canCheckIn }: {
         toast({ tone: "success", title: "Checked out" })
       } else {
         await checkIn.mutateAsync({
-          staff_id: staffId as number,
+          employee_id: employeeId as number,
           ...(position ?? {}),
         })
         toast({ tone: "success", title: "Checked in" })

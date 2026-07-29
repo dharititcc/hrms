@@ -46,33 +46,33 @@ export const payrollService = {
   },
 
   // An employee's salary, and the revisions behind it.
-  async currentSalary(staffId: number) {
-    const { data } = await apiClient.get<{ data: SalaryAssignment | null }>(`/auth/staff/${staffId}/salary`)
+  async currentSalary(employeeId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment | null }>(`/auth/employees/${employeeId}/salary`)
     return data.data
   },
-  async salaryHistory(staffId: number) {
-    const { data } = await apiClient.get<{ data: SalaryAssignment[] }>(`/auth/staff/${staffId}/salary/history`)
+  async salaryHistory(employeeId: number) {
+    const { data } = await apiClient.get<{ data: SalaryAssignment[] }>(`/auth/employees/${employeeId}/salary/history`)
     return data.data
   },
-  async assignSalary(staffId: number, input: SalaryAssignmentInput) {
-    const { data } = await apiClient.post<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary`, input)
+  async assignSalary(employeeId: number, input: SalaryAssignmentInput) {
+    const { data } = await apiClient.post<{ data: SalaryAssignment }>(`/auth/employees/${employeeId}/salary`, input)
     return data.data
   },
   // Where the pay goes, and under what tax identity.
-  async profile(staffId: number) {
-    const { data } = await apiClient.get<{ data: PayrollProfile | null }>(`/auth/staff/${staffId}/payroll-profile`)
+  async profile(employeeId: number) {
+    const { data } = await apiClient.get<{ data: PayrollProfile | null }>(`/auth/employees/${employeeId}/payroll-profile`)
     return data.data
   },
-  async saveProfile(staffId: number, input: PayrollProfileInput) {
-    const { data } = await apiClient.put<{ data: PayrollProfile }>(`/auth/staff/${staffId}/payroll-profile`, input)
+  async saveProfile(employeeId: number, input: PayrollProfileInput) {
+    const { data } = await apiClient.put<{ data: PayrollProfile }>(`/auth/employees/${employeeId}/payroll-profile`, input)
     return data.data
   },
-  async removeProfile(staffId: number) {
-    await apiClient.delete(`/auth/staff/${staffId}/payroll-profile`)
+  async removeProfile(employeeId: number) {
+    await apiClient.delete(`/auth/employees/${employeeId}/payroll-profile`)
   },
 
-  async endSalary(staffId: number, effectiveTo: string) {
-    const { data } = await apiClient.patch<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary/end`, { effective_to: effectiveTo })
+  async endSalary(employeeId: number, effectiveTo: string) {
+    const { data } = await apiClient.patch<{ data: SalaryAssignment }>(`/auth/employees/${employeeId}/salary/end`, { effective_to: effectiveTo })
     return data.data
   },
 

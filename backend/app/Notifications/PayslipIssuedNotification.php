@@ -30,7 +30,7 @@ class PayslipIssuedNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $slip = $this->slip->loadMissing(['run', 'staff']);
+        $slip = $this->slip->loadMissing(['run', 'employee']);
         $period = $slip->run?->title ?? 'the latest period';
         $amount = $slip->country->currencySymbol().number_format((float) $slip->net_salary, 2);
 

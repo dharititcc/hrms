@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\Task;
 use App\Models\TaskChecklistItem;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
 use App\Notifications\TaskDueReminderNotification;
+use App\Services\EmployeeInvitationService;
 use App\Services\RecurringTaskService;
-use App\Services\StaffInvitationService;
 use App\Services\TaskReminderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -36,10 +36,10 @@ class RecurringTaskTest extends TestCase
 
     private function teammate(User $owner): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     public function test_missed_occurrences_are_caught_up_and_dated_correctly(): void

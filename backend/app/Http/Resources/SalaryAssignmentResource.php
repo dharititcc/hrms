@@ -12,8 +12,8 @@ class SalaryAssignmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'staff_id' => $this->staff_id,
-            'staff_name' => $this->whenLoaded('staff', fn () => $this->staff?->name),
+            'employee_id' => $this->staff_id,
+            'employee_name' => $this->whenLoaded('employee', fn () => $this->employee?->name),
             'salary_structure_id' => $this->salary_structure_id,
             'structure_name' => $this->whenLoaded('structure', fn () => $this->structure?->name),
 

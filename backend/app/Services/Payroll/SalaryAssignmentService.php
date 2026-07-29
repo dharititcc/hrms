@@ -3,10 +3,10 @@
 namespace App\Services\Payroll;
 
 use App\Enums\SalaryAssignmentStatus;
+use App\Models\Employee;
 use App\Models\EmployeeSalaryAssignment;
 use App\Models\EmployeeSalaryComponentValue;
 use App\Models\SalaryComponent;
-use App\Models\Staff;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -24,10 +24,10 @@ use Illuminate\Validation\ValidationException;
 class SalaryAssignmentService
 {
     /** Every assignment for one employee, newest first. */
-    public function history(Staff $staff): Collection
+    public function history(Employee $employee): Collection
     {
         return EmployeeSalaryAssignment::query()
-            ->where('staff_id', $staff->id)
+            ->where('staff_id', $employee->id)
             ->with(['structure', 'componentValues.component'])
             ->orderByDesc('effective_from')
             ->orderByDesc('id')
@@ -35,20 +35,20 @@ class SalaryAssignmentService
     }
 
     /** The assignment in force on a date, or null if the employee had none. */
-    public function effectiveOn(Staff $staff, Carbon $date): ?EmployeeSalaryAssignment
+    public function effectiveOn(Employee $employee, Carbon $date): ?EmployeeSalaryAssignment
     {
         return EmployeeSalaryAssignment::query()
-            ->where('staff_id', $staff->id)
+            ->where('staff_id', $employee->id)
             ->whereIn('status', [SalaryAssignmentStatus::Active, SalaryAssignmentStatus::Superseded])
             ->effectiveOn($date)
             ->orderByDesc('effective_from')
             ->first();
     }
 
-    public function current(Staff $staff): ?EmployeeSalaryAssignment
+    public function current(Employee $employee): ?EmployeeSalaryAssignment
     {
         return EmployeeSalaryAssignment::query()
-            ->where('staff_id', $staff->id)
+            ->where('staff_id', $employee->id)
             ->active()
             ->orderByDesc('effective_from')
             ->first();
@@ -59,10 +59,10 @@ class SalaryAssignmentService
      *
      * @param  array<int, float>  $componentValues  component id => per-employee value
      */
-    public function assign(Staff $staff, User $author, array $attributes, array $componentValues = []): EmployeeSalaryAssignment
+    public function assign(Employee $employee, User $author, array $attributes, array $componentValues = []): EmployeeSalaryAssignment
     {
         $effectiveFrom = Carbon::parse($attributes['effective_from'])->startOfDay();
-        $current = $this->current($staff);
+        $current = $this->current($employee);
 
         if ($current !== null && $effectiveFrom->lessThanOrEqualTo($current->effective_from)) {
             // Allowing this would leave two assignments claiming the same days
@@ -73,7 +73,7 @@ class SalaryAssignmentService
             ]);
         }
 
-        return DB::transaction(function () use ($staff, $author, $attributes, $componentValues, $effectiveFrom, $current): EmployeeSalaryAssignment {
+        return DB::transaction(function () use ($employee, $author, $attributes, $componentValues, $effectiveFrom, $current): EmployeeSalaryAssignment {
             if ($current !== null) {
                 $current->update([
                     // Closed the day before the revision starts, leaving no gap
@@ -84,8 +84,8 @@ class SalaryAssignmentService
             }
 
             $assignment = EmployeeSalaryAssignment::create([
-                'owner_id' => $staff->owner_id,
-                'staff_id' => $staff->id,
+                'owner_id' => $employee->owner_id,
+                'staff_id' => $employee->id,
                 'salary_structure_id' => $attributes['salary_structure_id'] ?? null,
                 'basic_salary' => $attributes['basic_salary'],
                 'currency_code' => $attributes['currency_code'],

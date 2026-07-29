@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\Employee;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
 use App\Models\Meeting;
@@ -10,10 +11,9 @@ use App\Models\MeetingParticipant;
 use App\Models\PayrollRun;
 use App\Models\Project;
 use App\Models\SalarySlip;
-use App\Models\Staff;
 use App\Models\Task;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -36,10 +36,10 @@ class DashboardStatsTest extends TestCase
 
     private function teammate(User $owner): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     public function test_task_counts_reflect_status_dates_and_assignment(): void
@@ -93,7 +93,7 @@ class DashboardStatsTest extends TestCase
     {
         $owner = User::factory()->create();
         $mate = $this->teammate($owner);
-        Staff::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
+        Employee::create(['owner_id' => $owner->id, 'name' => 'Uninvited', 'email' => 'u@example.com', 'role' => 'member', 'status' => 'active']);
 
         $meeting = Meeting::create([
             'owner_id' => $owner->id, 'title' => 'Standup', 'type' => 'google_meet', 'status' => 'scheduled',
@@ -110,7 +110,7 @@ class DashboardStatsTest extends TestCase
         // The invitation is still unanswered, so it needs their attention.
         $this->assertSame(1, $stats['meetings']['awaiting_my_reply']);
 
-        $this->assertSame(2, $stats['people']['staff']);
+        $this->assertSame(2, $stats['people']['employees']);
         $this->assertSame(1, $stats['people']['with_accounts']);
     }
 
@@ -148,10 +148,10 @@ class DashboardStatsTest extends TestCase
     {
         $owner = User::factory()->create();
         $mate = $this->teammate($owner);
-        $absent = Staff::create(['owner_id' => $owner->id, 'name' => 'Nobody', 'email' => 'n@example.com', 'role' => 'member', 'status' => 'active']);
+        $absent = Employee::create(['owner_id' => $owner->id, 'name' => 'Nobody', 'email' => 'n@example.com', 'role' => 'member', 'status' => 'active']);
 
         Attendance::create([
-            'owner_id' => $owner->id, 'staff_id' => $mate->staffId(), 'work_date' => now()->toDateString(),
+            'owner_id' => $owner->id, 'staff_id' => $mate->employeeId(), 'work_date' => now()->toDateString(),
             'check_in' => '09:45', 'status' => 'late', 'requires_approval' => true,
         ]);
 
@@ -171,7 +171,7 @@ class DashboardStatsTest extends TestCase
 
         // The owner has no staff record, so there is nothing of their own.
         $this->assertFalse($stats['attendance']['checked_in']);
-        $this->assertSame(2, $stats['attendance']['active_staff']);
+        $this->assertSame(2, $stats['attendance']['active_employees']);
         $this->assertSame(1, $stats['attendance']['present_today']);
         $this->assertSame(1, $stats['attendance']['late_today']);
         // Nobody recorded anything for them, which is not the same as absent.
@@ -188,7 +188,7 @@ class DashboardStatsTest extends TestCase
 
         // Three inclusive days: the 10th, 11th and 12th.
         LeaveRequest::create([
-            'owner_id' => $owner->id, 'staff_id' => $mate->staffId(), 'leave_type_id' => $type->id,
+            'owner_id' => $owner->id, 'staff_id' => $mate->employeeId(), 'leave_type_id' => $type->id,
             'start_date' => now()->startOfYear()->addDays(9)->toDateString(),
             'end_date' => now()->startOfYear()->addDays(11)->toDateString(),
             'status' => 'approved',
@@ -196,7 +196,7 @@ class DashboardStatsTest extends TestCase
 
         // Pending is not granted, so it must not reduce the balance.
         LeaveRequest::create([
-            'owner_id' => $owner->id, 'staff_id' => $mate->staffId(), 'leave_type_id' => $type->id,
+            'owner_id' => $owner->id, 'staff_id' => $mate->employeeId(), 'leave_type_id' => $type->id,
             'start_date' => now()->addWeek()->toDateString(), 'end_date' => now()->addWeek()->toDateString(),
             'status' => 'pending',
         ]);
@@ -232,7 +232,7 @@ class DashboardStatsTest extends TestCase
 
         foreach ([[$draft, 'PS-D'], [$approved, 'PS-A']] as [$run, $number]) {
             SalarySlip::create([
-                'owner_id' => $owner->id, 'payroll_run_id' => $run->id, 'staff_id' => $mate->staffId(),
+                'owner_id' => $owner->id, 'payroll_run_id' => $run->id, 'staff_id' => $mate->employeeId(),
                 'slip_number' => $number, 'country' => 'IN', 'currency_code' => 'INR',
                 'net_salary' => 45000, 'status' => 'approved',
             ]);

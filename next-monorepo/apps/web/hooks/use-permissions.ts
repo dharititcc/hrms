@@ -23,7 +23,7 @@ export function usePermissions() {
   return {
     role: data?.role,
     isWorkspaceOwner: data?.is_workspace_owner ?? false,
-    staffId: data?.staff_id ?? null,
+    employeeId: data?.employee_id ?? null,
     isLoading,
     /**
      * False until permissions have loaded, so a control never appears and then

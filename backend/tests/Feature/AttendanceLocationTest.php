@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\AttendanceLocation;
-use App\Models\Staff;
+use App\Models\Employee;
 use App\Models\User;
-use App\Services\StaffInvitationService;
+use App\Services\EmployeeInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -71,11 +71,11 @@ class AttendanceLocationTest extends TestCase
     public function test_deleting_an_office_keeps_the_attendance_recorded_there(): void
     {
         $owner = User::factory()->create();
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
         $office = AttendanceLocation::create([...$this->payload(), 'owner_id' => $owner->id, 'is_active' => true]);
 
         $attendance = Attendance::create([
-            'owner_id' => $owner->id, 'staff_id' => $staff->id, 'work_date' => now()->toDateString(),
+            'owner_id' => $owner->id, 'staff_id' => $employee->id, 'work_date' => now()->toDateString(),
             'status' => 'present', 'check_in_location_id' => $office->id,
         ]);
 
@@ -90,11 +90,11 @@ class AttendanceLocationTest extends TestCase
     public function test_employees_may_read_offices_but_not_change_them(): void
     {
         $owner = User::factory()->create();
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => 'g@example.com', 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
         AttendanceLocation::create([...$this->payload(), 'owner_id' => $owner->id, 'is_active' => true]);
 
-        Sanctum::actingAs($staff->refresh()->user);
+        Sanctum::actingAs($employee->refresh()->user);
 
         // They need to see where they are expected to be.
         $this->getJson('/api/auth/attendance-locations')->assertOk()->assertJsonCount(1, 'data');

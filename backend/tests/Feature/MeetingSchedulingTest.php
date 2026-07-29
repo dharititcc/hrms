@@ -4,16 +4,16 @@ namespace Tests\Feature;
 
 use App\Enums\MeetingStatus;
 use App\Enums\RepeatFrequency;
+use App\Models\Employee;
 use App\Models\Meeting;
 use App\Models\MeetingGuest;
 use App\Models\MeetingParticipant;
-use App\Models\Staff;
 use App\Models\User;
 use App\Notifications\MeetingInvitationNotification;
 use App\Notifications\MeetingReminderNotification;
+use App\Services\EmployeeInvitationService;
 use App\Services\MeetingReminderService;
 use App\Services\RecurringMeetingService;
-use App\Services\StaffInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -41,10 +41,10 @@ class MeetingSchedulingTest extends TestCase
 
     private function teammate(User $owner, string $email = 'grace@example.com'): User
     {
-        $staff = Staff::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'member', 'status' => 'active']);
-        app(StaffInvitationService::class)->invite($staff);
+        $employee = Employee::create(['owner_id' => $owner->id, 'name' => 'Grace', 'email' => $email, 'role' => 'member', 'status' => 'active']);
+        app(EmployeeInvitationService::class)->invite($employee);
 
-        return $staff->refresh()->user;
+        return $employee->refresh()->user;
     }
 
     // --- Reminders ------------------------------------------------------

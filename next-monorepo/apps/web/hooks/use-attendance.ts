@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { attendanceService } from "@/services/attendance-service"
 import type { AttendanceLocationInput, CapturedPosition, CheckInInput } from "@/types/attendance"
 
-export function useAttendance(filters: { month?: string; staff_id?: number }) {
+export function useAttendance(filters: { month?: string; employee_id?: number }) {
   return useQuery({
     queryKey: ["attendance", filters],
     queryFn: () => attendanceService.list(filters),

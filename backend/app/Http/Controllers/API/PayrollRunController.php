@@ -32,7 +32,7 @@ class PayrollRunController extends Controller
     {
         $this->authorizeRun($request, $run);
 
-        return new PayrollRunResource($run->load(['slips.staff', 'slips.lines', 'slips.payments']));
+        return new PayrollRunResource($run->load(['slips.employee', 'slips.lines', 'slips.payments']));
     }
 
     public function store(GeneratePayrollRequest $request): JsonResponse

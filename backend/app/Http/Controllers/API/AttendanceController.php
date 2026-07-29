@@ -25,7 +25,7 @@ class AttendanceController extends Controller
         ]);
 
         $query = Attendance::query()
-            ->with(['staff', 'checkInLocation'])
+            ->with(['employee', 'checkInLocation'])
             ->where('owner_id', $request->user()->workspaceOwnerId());
 
         // Without attendance.view-all, only the caller's own days.
@@ -45,11 +45,11 @@ class AttendanceController extends Controller
     /** Today's record for the caller, for the dashboard's check-in card. */
     public function today(Request $request): JsonResponse
     {
-        $staff = $request->user()->staffProfile;
+        $employee = $request->user()->employeeProfile;
 
-        abort_if($staff === null, 404, 'This account is not linked to an employee record.');
+        abort_if($employee === null, 404, 'This account is not linked to an employee record.');
 
-        $attendance = $this->service->forDate($staff, now()->toDateString());
+        $attendance = $this->service->forDate($employee, now()->toDateString());
 
         return response()->json([
             'data' => $attendance === null ? null : new AttendanceResource($attendance->load('checkInLocation')),
@@ -67,17 +67,17 @@ class AttendanceController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $staff = $request->user()->workspaceStaff()->findOrFail($validated['staff_id']);
+        $employee = $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
 
         abort_unless(
-            RecordScope::allows($request->user(), Module::Attendance, $staff->id),
+            RecordScope::allows($request->user(), Module::Attendance, $employee->id),
             403,
             'You can only check in for yourself.',
         );
 
-        $attendance = $this->service->checkIn($staff, $request->user(), $validated, $request);
+        $attendance = $this->service->checkIn($employee, $request->user(), $validated, $request);
 
-        return response()->json(['data' => new AttendanceResource($attendance->load(['staff', 'checkInLocation']))]);
+        return response()->json(['data' => new AttendanceResource($attendance->load(['employee', 'checkInLocation']))]);
     }
 
     public function checkOut(Request $request, Attendance $attendance): JsonResponse
@@ -96,7 +96,7 @@ class AttendanceController extends Controller
         ]);
 
         return response()->json([
-            'data' => new AttendanceResource($this->service->checkOut($attendance, $validated)->load(['staff', 'checkInLocation'])),
+            'data' => new AttendanceResource($this->service->checkOut($attendance, $validated)->load(['employee', 'checkInLocation'])),
         ]);
     }
 
@@ -106,7 +106,7 @@ class AttendanceController extends Controller
         abort_unless($attendance->owner_id === $request->user()->workspaceOwnerId(), 403);
 
         return response()->json([
-            'data' => new AttendanceResource($this->service->approve($attendance, $request->user())->load(['staff', 'checkInLocation'])),
+            'data' => new AttendanceResource($this->service->approve($attendance, $request->user())->load(['employee', 'checkInLocation'])),
         ]);
     }
 }

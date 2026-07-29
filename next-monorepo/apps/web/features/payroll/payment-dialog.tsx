@@ -82,7 +82,7 @@ export function PaymentDialog({ slip, runId, canPay, onClose }: {
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border bg-background p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="payment-dialog-title">
         <div className="flex items-start justify-between">
           <div>
-            <h2 id="payment-dialog-title" className="text-lg font-semibold">Payments — {slip.staff_name ?? slip.slip_number}</h2>
+            <h2 id="payment-dialog-title" className="text-lg font-semibold">Payments — {slip.employee_name ?? slip.slip_number}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{slip.slip_number}</p>
           </div>
           <Button variant="ghost" size="icon-sm" aria-label="Close dialog" onPress={onClose}><X /></Button>

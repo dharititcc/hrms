@@ -25,23 +25,23 @@ final class RecordScope
             return $query;
         }
 
-        $staffId = $user->staffId();
+        $employeeId = $user->employeeId();
 
-        // A user with no staff record — the workspace owner — always holds
+        // A user with no employee record — the workspace owner — always holds
         // view-all, so reaching here without one means they own nothing
         // personal in this module. Return no rows rather than everything.
-        return $staffId === null
+        return $employeeId === null
             ? $query->whereRaw('1 = 0')
-            : $query->where($staffColumn, $staffId);
+            : $query->where($staffColumn, $employeeId);
     }
 
     /** Whether the caller may read a specific record in this module. */
-    public static function allows(User $user, Module $module, ?int $recordStaffId): bool
+    public static function allows(User $user, Module $module, ?int $recordEmployeeId): bool
     {
         if ($user->hasPermission($module, Action::ViewAll)) {
             return true;
         }
 
-        return $recordStaffId !== null && $recordStaffId === $user->staffId();
+        return $recordEmployeeId !== null && $recordEmployeeId === $user->employeeId();
     }
 }

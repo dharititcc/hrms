@@ -12,12 +12,12 @@ use Illuminate\Http\Request;
 class WorkspaceUserController extends Controller
 {
     /**
-     * Users who can be assigned work or mentioned. Staff without an account are
+     * Users who can be assigned work or mentioned. Employee without an account are
      * excluded — they could not see the task or receive its notifications.
      */
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->hasPermission(Module::Staff, Action::View), 403);
+        abort_unless($request->user()->hasPermission(Module::Employees, Action::View), 403);
 
         $users = WorkspaceUsers::query($request->user()->workspaceOwnerId())
             ->orderBy('name')

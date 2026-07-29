@@ -28,7 +28,7 @@ class PayrollController extends Controller
         ]);
 
         $query = SalarySlip::query()
-            ->with(['staff', 'run'])
+            ->with(['employee', 'run'])
             ->where('owner_id', $request->user()->workspaceOwnerId());
 
         // Without payroll.view-all this returns only the caller's own payslips.
@@ -47,6 +47,6 @@ class PayrollController extends Controller
         abort_unless($slip->owner_id === $request->user()->workspaceOwnerId(), 403);
         abort_unless(RecordScope::allows($request->user(), Module::Payroll, $slip->staff_id), 403);
 
-        return new SalarySlipResource($slip->load(['staff', 'run', 'lines']));
+        return new SalarySlipResource($slip->load(['employee', 'run', 'lines']));
     }
 }

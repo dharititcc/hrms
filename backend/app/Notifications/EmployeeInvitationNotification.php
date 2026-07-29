@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class StaffInvitationNotification extends Notification implements ShouldQueue
+class EmployeeInvitationNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

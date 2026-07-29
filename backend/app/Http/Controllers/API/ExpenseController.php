@@ -17,7 +17,7 @@ class ExpenseController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Expense::query()
-            ->with('staff')
+            ->with('employee')
             ->where('owner_id', $request->user()->workspaceOwnerId());
 
         // Without expenses.view-all, a claimant sees only their own claims.
@@ -37,7 +37,7 @@ class ExpenseController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $request->user()->workspaceStaff()->findOrFail($validated['staff_id']);
+        $request->user()->workspaceEmployees()->findOrFail($validated['staff_id']);
 
         // Nobody may file a claim in a colleague's name unless they oversee the
         // module; otherwise the claim is forced onto the caller's own record.
@@ -53,7 +53,7 @@ class ExpenseController extends Controller
             'status' => ExpenseStatus::Pending->value,
         ]);
 
-        return response()->json(new ExpenseResource($expense->load('staff')), 201);
+        return response()->json(new ExpenseResource($expense->load('employee')), 201);
     }
 
     public function updateStatus(Request $request, Expense $expense): JsonResponse
@@ -66,6 +66,6 @@ class ExpenseController extends Controller
 
         $expense->update($validated);
 
-        return response()->json(new ExpenseResource($expense->load('staff')));
+        return response()->json(new ExpenseResource($expense->load('employee')));
     }
 }

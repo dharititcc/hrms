@@ -34,9 +34,9 @@ class EmployeeSalaryAssignment extends Model
         ];
     }
 
-    public function staff(): BelongsTo
+    public function employee(): BelongsTo
     {
-        return $this->belongsTo(Staff::class);
+        return $this->belongsTo(Employee::class, 'staff_id');
     }
 
     public function structure(): BelongsTo

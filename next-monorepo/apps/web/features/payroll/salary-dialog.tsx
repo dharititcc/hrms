@@ -31,15 +31,15 @@ type SalaryFormValues = z.infer<typeof salarySchema>
  * day before the new one starts, so a payslip already issued can still be
  * explained by the assignment in force when it was generated.
  */
-export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
-  staffId: number
-  staffName: string
+export function SalaryDialog({ employeeId, employeeName, canEdit, onClose }: {
+  employeeId: number
+  employeeName: string
   canEdit: boolean
   onClose: () => void
 }) {
-  const { current, history } = useSalary(staffId)
+  const { current, history } = useSalary(employeeId)
   const { data: structureData } = useSalaryStructures()
-  const { assign, end } = useSalaryMutations(staffId)
+  const { assign, end } = useSalaryMutations(employeeId)
   const { toast } = useToast()
   const [revising, setRevising] = useState(false)
   const [tab, setTab] = useState<"salary" | "bank">("salary")
@@ -50,7 +50,7 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
   const revisions = history.data ?? []
 
   const endSalary = async () => {
-    const date = window.prompt(`Last day ${staffName} is paid for (YYYY-MM-DD):`)
+    const date = window.prompt(`Last day ${employeeName} is paid for (YYYY-MM-DD):`)
     if (!date) return
     try {
       await end.mutateAsync(date)
@@ -71,7 +71,7 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border bg-background p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="salary-dialog-title">
         <div className="flex items-start justify-between">
           <div>
-            <h2 id="salary-dialog-title" className="text-lg font-semibold">Salary — {staffName}</h2>
+            <h2 id="salary-dialog-title" className="text-lg font-semibold">Salary — {employeeName}</h2>
             <p className="mt-1 text-sm text-muted-foreground">What payroll calculates this employee&rsquo;s payslip from.</p>
           </div>
           <Button variant="ghost" size="icon-sm" aria-label="Close dialog" onPress={onClose}><X /></Button>
@@ -83,7 +83,7 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
         </div>
 
         {tab === "bank" ? (
-          <PayrollProfileForm staffId={staffId} staffName={staffName} canEdit={canEdit} />
+          <PayrollProfileForm employeeId={employeeId} employeeName={employeeName} canEdit={canEdit} />
         ) : (
         <>
         {current.isLoading ? (
@@ -122,7 +122,7 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
 
         {showForm && (
           <SalaryForm
-            staffName={staffName}
+            employeeName={employeeName}
             current={active}
             structures={structures}
             countries={countries}
@@ -162,8 +162,8 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
   )
 }
 
-function SalaryForm({ staffName, current, structures, countries, onCancel, onSaved, assign }: {
-  staffName: string
+function SalaryForm({ employeeName, current, structures, countries, onCancel, onSaved, assign }: {
+  employeeName: string
   current: SalaryAssignment | null
   structures: { id: number; name: string; country: string }[]
   countries: { value: string; label: string; currency_code: string }[]
@@ -206,7 +206,7 @@ function SalaryForm({ staffName, current, structures, countries, onCancel, onSav
 
   return (
     <form className="mt-6 grid gap-4 rounded-xl border p-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-      <p className="text-sm font-medium">{current ? `Revise ${staffName}’s salary` : "Set salary"}</p>
+      <p className="text-sm font-medium">{current ? `Revise ${employeeName}’s salary` : "Set salary"}</p>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Basic salary" type="number" step="0.01" min="0" error={errors.basic_salary?.message} {...register("basic_salary")} />
