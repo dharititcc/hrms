@@ -112,6 +112,26 @@ class PayslipDeliveryTest extends TestCase
         $this->assertStringContainsString('₹64,000.00', $html);
     }
 
+    public function test_the_payslip_shows_the_account_masked_when_one_is_on_file(): void
+    {
+        $staff = $this->staff();
+
+        Sanctum::actingAs($this->owner);
+        $this->putJson("/api/auth/staff/{$staff->id}/payroll-profile", [
+            'country' => 'IN', 'bank_name' => 'State Bank',
+            'account_holder_name' => 'Grace Hopper', 'account_number' => '123456789012',
+        ])->assertCreated();
+
+        [, $slip] = $this->approvedRun($staff);
+        $html = view('payroll.payslip', $this->invokePdfData($slip))->render();
+
+        // A payslip is forwarded and filed far more casually than it is
+        // guarded, so the number is masked even on the document itself.
+        $this->assertStringContainsString('State Bank', $html);
+        $this->assertStringContainsString('9012', $html);
+        $this->assertStringNotContainsString('123456789012', $html);
+    }
+
     /** @return array<string, mixed> */
     private function invokePdfData(SalarySlip $slip): array
     {

@@ -17,6 +17,7 @@ use App\Http\Controllers\API\DashboardController;
 use App\Http\Controllers\API\GuestRsvpController;
 use App\Http\Controllers\API\MeetingController;
 use App\Http\Controllers\API\NotificationController;
+use App\Http\Controllers\API\PayrollProfileController;
 use App\Http\Controllers\API\PayrollRunController;
 use App\Http\Controllers\API\PayslipController;
 use App\Http\Controllers\API\PermissionController;
@@ -106,6 +107,15 @@ Route::prefix('auth')->group(function () {
         Route::post('/salary-components', [SalaryComponentController::class, 'store'])->middleware('can:payroll.create');
         Route::put('/salary-components/{component}', [SalaryComponentController::class, 'update'])->middleware('can:payroll.edit');
         Route::delete('/salary-components/{component}', [SalaryComponentController::class, 'destroy'])->middleware('can:payroll.delete');
+
+        /*
+        | Where an employee's pay goes. payroll.view rather than view-all: an
+        | employee maintains their own, and RecordScope in the controller is
+        | what keeps them out of anybody else's.
+        */
+        Route::get('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'show'])->middleware('can:payroll.view');
+        Route::put('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'store'])->middleware('can:payroll.view');
+        Route::delete('/staff/{staff}/payroll-profile', [PayrollProfileController::class, 'destroy'])->middleware('can:payroll.edit');
 
         // An employee's salary and its revision history.
         Route::get('/staff/{staff}/salary', [SalaryAssignmentController::class, 'current'])->middleware('can:payroll.view');

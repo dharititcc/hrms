@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Announcement;
 use App\Models\Asset;
 use App\Models\Candidate;
+use App\Models\EmployeePayrollProfile;
 use App\Models\Expense;
 use App\Models\JobOpening;
 use App\Models\LeaveRequest;
@@ -71,6 +72,10 @@ final class WorkspaceRecords
             // carries attachments while being scoped through its parent task.
             'user' => User::class,
             'task_comment' => TaskComment::class,
+            // Logs activity, so it needs an alias — but stays out of map():
+            // bank details are not somewhere to attach files, and nothing a
+            // client sends should be able to name them.
+            'employee_payroll_profile' => EmployeePayrollProfile::class,
         ];
     }
 }

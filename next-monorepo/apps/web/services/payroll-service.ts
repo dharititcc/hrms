@@ -1,7 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   GeneratePayrollInput, PayrollRun, PayrollRunListResponse,
-  PayslipDeliveryResult, RecordPaymentInput,
+  PayrollProfile, PayrollProfileInput, PayslipDeliveryResult, RecordPaymentInput,
   SalaryAssignment, SalaryAssignmentInput, SalaryPayment, SalaryPaymentListResponse,
   SalaryComponent, SalaryComponentInput, SalaryComponentListResponse,
   SalaryStructure, SalaryStructureInput, SalaryStructureListResponse,
@@ -58,6 +58,19 @@ export const payrollService = {
     const { data } = await apiClient.post<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary`, input)
     return data.data
   },
+  // Where the pay goes, and under what tax identity.
+  async profile(staffId: number) {
+    const { data } = await apiClient.get<{ data: PayrollProfile | null }>(`/auth/staff/${staffId}/payroll-profile`)
+    return data.data
+  },
+  async saveProfile(staffId: number, input: PayrollProfileInput) {
+    const { data } = await apiClient.put<{ data: PayrollProfile }>(`/auth/staff/${staffId}/payroll-profile`, input)
+    return data.data
+  },
+  async removeProfile(staffId: number) {
+    await apiClient.delete(`/auth/staff/${staffId}/payroll-profile`)
+  },
+
   async endSalary(staffId: number, effectiveTo: string) {
     const { data } = await apiClient.patch<{ data: SalaryAssignment }>(`/auth/staff/${staffId}/salary/end`, { effective_to: effectiveTo })
     return data.data

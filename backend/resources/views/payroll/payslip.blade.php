@@ -60,6 +60,12 @@
             <div class="muted">Pay date</div>
             <div>{{ $payDate }}</div>
             <div class="muted">Paid in {{ $slip->currency_code }}</div>
+            @if ($profile?->maskedAccountNumber() || $profile?->maskedIban())
+                {{-- Masked: a payslip is forwarded and filed far more casually than it is guarded. --}}
+                <div class="muted" style="margin-top: 4px;">
+                    {{ $profile->bank_name ? $profile->bank_name.' ' : '' }}{{ $profile->maskedAccountNumber() ?? $profile->maskedIban() }}
+                </div>
+            @endif
         </td>
     </tr>
 </table>

@@ -20,6 +20,7 @@ class PayslipPdfService
     public function render(SalarySlip $slip): string
     {
         $slip->loadMissing(['staff', 'run', 'lines', 'owner']);
+        $slip->staff?->loadMissing('payrollProfile');
 
         return Pdf::loadView('payroll.payslip', $this->data($slip))
             ->setPaper('a4')
@@ -59,6 +60,13 @@ class PayslipPdfService
                 ?? $slip->run?->period_end?->format('j M Y')
                 ?? '—',
             'approvedAt' => $slip->run?->approved_at?->format('j M Y'),
+
+            /*
+            | The account is shown masked even here. A payslip is forwarded,
+            | printed and filed far more casually than it is guarded, and the
+            | last four digits are enough to confirm where the money went.
+            */
+            'profile' => $slip->staff?->payrollProfile,
 
             'earnings' => $lines->where('type', SalaryComponentType::Earning)->values(),
             'deductions' => $lines->where('type', SalaryComponentType::Deduction)->values(),

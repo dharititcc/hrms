@@ -106,6 +106,57 @@ export type SalaryPaymentListResponse = {
   }
 }
 
+/**
+ * Bank and tax details. The secrets only ever arrive masked, so the form has
+ * to distinguish "not set" from "set, not shown" — hence the has_* flags.
+ */
+export type PayrollProfile = {
+  id: number
+  staff_id: number
+  staff_name?: string | null
+  country: string
+  country_label: string
+  currency_code: string
+
+  bank_name: string | null
+  account_holder_name: string | null
+  bank_code: string | null
+  swift_code: string | null
+
+  account_number_masked: string | null
+  iban_masked: string | null
+  tax_identifier_masked: string | null
+
+  has_account_number: boolean
+  has_iban: boolean
+  has_tax_identifier: boolean
+
+  tax_regime: string | null
+  tax_notes: string | null
+
+  /** Whether there is enough here to actually send this person money. */
+  is_payable: boolean
+  /** What this country calls these fields: PAN and IFSC, or SSN and routing number. */
+  labels: { tax_identifier: string; bank_code: string }
+
+  updated_at: string | null
+}
+
+export type PayrollProfileInput = {
+  country: string
+  currency_code?: string | null
+  bank_name?: string | null
+  account_holder_name?: string | null
+  bank_code?: string | null
+  swift_code?: string | null
+  tax_regime?: string | null
+  tax_notes?: string | null
+  /** Omit to keep what is stored; send an empty string to clear it. */
+  account_number?: string
+  iban?: string
+  tax_identifier?: string
+}
+
 export type PayslipDeliveryResult = {
   sent: number
   /** No account yet, so there is nobody proven to send salary figures to. */

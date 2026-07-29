@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { payrollService } from "@/services/payroll-service"
-import type { GeneratePayrollInput, RecordPaymentInput, SalaryAssignmentInput } from "@/types/payroll"
+import type { GeneratePayrollInput, PayrollProfileInput, RecordPaymentInput, SalaryAssignmentInput } from "@/types/payroll"
 
 export function usePayrollRuns(page = 1) {
   return useQuery({
@@ -120,4 +120,25 @@ export function useSalaryMutations(staffId: number | null) {
   })
 
   return { assign, end }
+}
+
+export function usePayrollProfile(staffId: number | null) {
+  return useQuery({
+    queryKey: ["payroll-profile", staffId],
+    queryFn: () => payrollService.profile(staffId as number),
+    enabled: staffId !== null,
+  })
+}
+
+export function usePayrollProfileMutations(staffId: number | null) {
+  const queryClient = useQueryClient()
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["payroll-profile", staffId] })
+
+  const save = useMutation({
+    mutationFn: (input: PayrollProfileInput) => payrollService.saveProfile(staffId as number, input),
+    onSuccess: refresh,
+  })
+  const remove = useMutation({ mutationFn: () => payrollService.removeProfile(staffId as number), onSuccess: refresh })
+
+  return { save, remove }
 }

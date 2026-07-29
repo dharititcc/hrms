@@ -42,6 +42,22 @@ enum PayrollCountry: string
         return $this->config()['date_format'] ?? 'Y-m-d';
     }
 
+    /**
+     * What this country calls its tax identifier: PAN, SSN, National Insurance
+     * number. Showing "Tax identifier" everywhere would leave people guessing
+     * which of their several numbers is wanted.
+     */
+    public function taxIdLabel(): string
+    {
+        return $this->config()['tax_id_label'] ?? 'Tax identifier';
+    }
+
+    /** IFSC code, routing number, sort code — same reasoning. */
+    public function bankCodeLabel(): string
+    {
+        return $this->config()['bank_code_label'] ?? 'Bank code';
+    }
+
     /** Statutory components the country mandates, as component definitions. */
     public function statutoryComponents(): array
     {

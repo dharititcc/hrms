@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['owner_id', 'name', 'email', 'phone', 'role', 'status'])]
 #[Hidden(['owner_id'])]
@@ -30,5 +31,11 @@ class Staff extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Bank and tax details. At most one, enforced by a unique staff_id. */
+    public function payrollProfile(): HasOne
+    {
+        return $this->hasOne(EmployeePayrollProfile::class);
     }
 }

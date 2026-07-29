@@ -13,6 +13,9 @@ class ActivityLogger
     /** Never written to the log, even if they appear in a model's changes. */
     private const REDACTED = ['password', 'remember_token', 'api_token'];
 
+    /** Stands in for a value too sensitive to keep, where the change still matters. */
+    private const WITHHELD = '[redacted]';
+
     public function log(string $action, Model $model, array $metadata = []): ?AuditLog
     {
         $ownerId = $model->getAttribute('owner_id') ?? Auth::user()?->workspaceOwnerId();
@@ -54,9 +57,37 @@ class ActivityLogger
 
         return [
             'changed' => array_keys($changes),
-            'old' => array_map($this->normalize(...), array_intersect_key($original, $changes)),
-            'new' => array_map($this->normalize(...), $changes),
+            'old' => $this->present(array_intersect_key($original, $changes), $model),
+            'new' => $this->present($changes, $model),
         ];
+    }
+
+    /**
+     * Normalises values, withholding those a model marks as sensitive.
+     *
+     * The attribute name stays in "changed" — that somebody's bank account was
+     * altered is exactly what an audit trail is for — but the number itself is
+     * not copied into a JSON column that is far easier to read than the
+     * encrypted original.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function present(array $values, Model $model): array
+    {
+        $sensitive = method_exists($model, 'redactedAuditAttributes')
+            ? $model->redactedAuditAttributes()
+            : [];
+
+        $presented = [];
+
+        foreach ($values as $key => $value) {
+            $presented[$key] = in_array($key, $sensitive, strict: true)
+                ? self::WITHHELD
+                : $this->normalize($value);
+        }
+
+        return $presented;
     }
 
     /** Enums and dates must become scalars before they hit the JSON column. */

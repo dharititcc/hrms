@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Button } from "@workspace/ui/components/button"
 import { FormField } from "@/components/ui/form-fields"
+import { PayrollProfileForm } from "@/features/payroll/payroll-profile-form"
 import { useSalaryStructures } from "@/hooks/use-payroll-config"
 import { useSalary, useSalaryMutations } from "@/hooks/use-payroll-runs"
 import { getApiErrorMessage } from "@/lib/api-error"
@@ -41,6 +42,7 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
   const { assign, end } = useSalaryMutations(staffId)
   const { toast } = useToast()
   const [revising, setRevising] = useState(false)
+  const [tab, setTab] = useState<"salary" | "bank">("salary")
 
   const active = current.data ?? null
   const structures = structureData?.data ?? []
@@ -75,6 +77,15 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
           <Button variant="ghost" size="icon-sm" aria-label="Close dialog" onPress={onClose}><X /></Button>
         </div>
 
+        <div className="mt-5 flex gap-2">
+          <Button size="sm" variant={tab === "salary" ? "secondary" : "outline"} onPress={() => setTab("salary")}>Salary</Button>
+          <Button size="sm" variant={tab === "bank" ? "secondary" : "outline"} onPress={() => setTab("bank")}>Bank &amp; tax</Button>
+        </div>
+
+        {tab === "bank" ? (
+          <PayrollProfileForm staffId={staffId} staffName={staffName} canEdit={canEdit} />
+        ) : (
+        <>
         {current.isLoading ? (
           <div className="mt-6 h-24 animate-pulse rounded-xl bg-muted" />
         ) : active ? (
@@ -143,6 +154,8 @@ export function SalaryDialog({ staffId, staffName, canEdit, onClose }: {
               ))}
             </ul>
           </section>
+        )}
+        </>
         )}
       </div>
     </div>
