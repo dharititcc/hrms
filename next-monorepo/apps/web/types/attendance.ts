@@ -74,6 +74,18 @@ export type AttendanceLocationInput = {
   is_active?: boolean
 }
 
+/**
+ * Times are the employee's own wall clock, not the corrector's: the record
+ * already knows which zone it was taken in, and reinterpreting it in the
+ * manager's would move somebody's day.
+ */
+export type AttendanceCorrectionInput = {
+  /** As "HH:MM", in the zone on the record. */
+  check_in?: string | null
+  check_out?: string | null
+  notes?: string | null
+}
+
 /** The service adds the browser's timezone, so callers never pass it. */
 export type CheckInInput = {
   employee_id: number

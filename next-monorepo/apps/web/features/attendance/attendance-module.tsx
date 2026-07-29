@@ -1,9 +1,10 @@
 "use client"
 
-import { CalendarCheck, Check, MapPin, Monitor, Smartphone, Tablet } from "lucide-react"
+import { CalendarCheck, Check, MapPin, Monitor, PencilLine, Smartphone, Tablet } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@workspace/ui/components/button"
 import { CheckInCard } from "@/features/attendance/check-in-card"
+import { CorrectionDialog } from "@/features/attendance/correction-dialog"
 import { attendanceStatusLabels, attendanceStatusStyles, formatMinutes, workModeLabels } from "@/features/attendance/labels"
 import { OfficeLocations } from "@/features/attendance/office-locations"
 import { useAttendance, useAttendanceMutations } from "@/hooks/use-attendance"
@@ -22,6 +23,7 @@ function currentMonth(): string {
 export function AttendanceModule() {
   const [month, setMonth] = useState(currentMonth)
   const [employeeFilter, setEmployeeFilter] = useState<number | "all">("all")
+  const [correcting, setCorrecting] = useState<AttendanceRecord | null>(null)
 
   const { can, employeeId: myEmployeeId } = usePermissions()
   const { toast } = useToast()
@@ -132,6 +134,7 @@ export function AttendanceModule() {
                       record={record}
                       showEmployee={seesEveryone}
                       onApprove={can("attendance.edit") && record.requires_approval ? () => void approveRecord(record) : undefined}
+                      onCorrect={can("attendance.edit") ? () => setCorrecting(record) : undefined}
                     />
                   ))}
                 </tbody>
@@ -140,6 +143,8 @@ export function AttendanceModule() {
           )}
         </div>
       )}
+
+      {correcting && <CorrectionDialog key={correcting.id} record={correcting} onClose={() => setCorrecting(null)} />}
     </div>
   )
 }
@@ -171,7 +176,12 @@ function Stat({ label, value, tone }: { label: string; value: number | string; t
   )
 }
 
-function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; showEmployee: boolean; onApprove?: () => void }) {
+function Row({ record, showEmployee, onApprove, onCorrect }: {
+  record: AttendanceRecord
+  showEmployee: boolean
+  onApprove?: () => void
+  onCorrect?: () => void
+}) {
   const DeviceIcon = record.device.type === "mobile" ? Smartphone : record.device.type === "tablet" ? Tablet : Monitor
   const { latitude, longitude, office } = record.check_in_location
 
@@ -221,11 +231,21 @@ function Row({ record, showEmployee, onApprove }: { record: AttendanceRecord; sh
         )}
       </td>
       <td className="px-5 py-4">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-1">
           {record.requires_approval && (
             onApprove
               ? <Button variant="outline" size="sm" onPress={onApprove}><Check />Approve</Button>
               : <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">Awaiting approval</span>
+          )}
+          {onCorrect && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Correct attendance for ${record.employee_name ?? "this employee"} on ${record.work_date}`}
+              onPress={onCorrect}
+            >
+              <PencilLine />
+            </Button>
           )}
         </div>
       </td>

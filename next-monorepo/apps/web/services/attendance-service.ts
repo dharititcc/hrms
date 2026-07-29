@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api-client"
 import type {
-  AttendanceListResponse, AttendanceLocation, AttendanceLocationInput,
+  AttendanceCorrectionInput, AttendanceListResponse, AttendanceLocation, AttendanceLocationInput,
   AttendanceLocationListResponse, AttendanceRecord, CapturedPosition, CheckInInput,
 } from "@/types/attendance"
 
@@ -30,6 +30,16 @@ export const attendanceService = {
       ...(position ?? {}),
       timezone: browserTimezone(),
     })
+    return data.data
+  },
+  /**
+   * Corrects the times on a day, restating the hours derived from them.
+   *
+   * No timezone is sent: the record keeps the one it was taken in, and the
+   * times given are read against that.
+   */
+  async correct(id: number, input: AttendanceCorrectionInput) {
+    const { data } = await apiClient.patch<{ data: AttendanceRecord }>(`/auth/attendance/${id}`, input)
     return data.data
   },
   async approve(id: number) {

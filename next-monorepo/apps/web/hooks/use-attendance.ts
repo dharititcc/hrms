@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { attendanceService } from "@/services/attendance-service"
-import type { AttendanceLocationInput, CapturedPosition, CheckInInput } from "@/types/attendance"
+import type { AttendanceCorrectionInput, AttendanceLocationInput, CapturedPosition, CheckInInput } from "@/types/attendance"
 
 export function useAttendance(filters: { month?: string; employee_id?: number }) {
   return useQuery({
@@ -55,6 +55,10 @@ export function useAttendanceMutations() {
     onSuccess: refresh,
   })
   const approve = useMutation({ mutationFn: (id: number) => attendanceService.approve(id), onSuccess: refresh })
+  const correct = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: AttendanceCorrectionInput }) => attendanceService.correct(id, input),
+    onSuccess: refresh,
+  })
 
-  return { checkIn, checkOut, approve }
+  return { checkIn, checkOut, approve, correct }
 }
