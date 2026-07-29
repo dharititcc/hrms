@@ -257,12 +257,27 @@ class AttendanceService
             : 0;
     }
 
+    /**
+     * Time present, less the unpaid break once one is due.
+     *
+     * The break is not simply subtracted. A four minute presence would have an
+     * hour taken off it and record nothing, and a plain subtraction also makes
+     * a slightly longer day worth less than a shorter one the moment the
+     * threshold is crossed. Holding the result at the threshold until the
+     * break is fully absorbed keeps it monotonic: more time present is never
+     * less time worked.
+     */
     private function workedMinutes(Attendance $attendance, Carbon $checkOutAt): int
     {
         $checkIn = Carbon::parse($attendance->work_date->toDateString().' '.$attendance->check_in);
-        $elapsed = (int) $checkIn->diffInMinutes($checkOutAt);
+        $elapsed = max(0, (int) $checkIn->diffInMinutes($checkOutAt));
+        $breakDue = (int) config('attendance.break_after_minutes');
 
-        return max(0, $elapsed - (int) $attendance->break_minutes);
+        if ($elapsed <= $breakDue) {
+            return $elapsed;
+        }
+
+        return max($breakDue, $elapsed - (int) $attendance->break_minutes);
     }
 
     private function statusFor(Attendance $attendance, int $workedMinutes): AttendanceStatus

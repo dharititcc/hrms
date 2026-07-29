@@ -116,6 +116,45 @@ class AttendanceCaptureTest extends TestCase
             ->assertJsonPath('data.overtime_minutes', 120);
     }
 
+    public function test_a_few_minutes_present_is_not_a_whole_break_deducted(): void
+    {
+        $this->travelTo(now()->setTime(13, 51));
+        Sanctum::actingAs($this->owner);
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
+
+        $this->travelTo(now()->setTime(13, 55));
+
+        // Nobody takes an hour's break inside four minutes; this recorded 0m.
+        $this->postJson("/api/auth/attendance/{$id}/check-out")
+            ->assertOk()
+            ->assertJsonPath('data.worked_minutes', 4);
+    }
+
+    public function test_a_longer_day_is_never_worth_less_than_a_shorter_one(): void
+    {
+        Sanctum::actingAs($this->owner);
+
+        // Either side of the point the break becomes due. Subtracting it
+        // outright would credit the longer day with an hour less.
+        $shorter = $this->workedMinutesFor(9, 0, 14, 55);
+        $longer = $this->workedMinutesFor(9, 0, 15, 5);
+
+        $this->assertSame(355, $shorter);
+        $this->assertGreaterThanOrEqual($shorter, $longer);
+    }
+
+    /** Runs one check-in and check-out on a fresh day, returning the minutes. */
+    private function workedMinutesFor(int $inHour, int $inMinute, int $outHour, int $outMinute): int
+    {
+        Attendance::query()->delete();
+        $this->travelTo(now()->setTime($inHour, $inMinute));
+        $id = $this->postJson('/api/auth/attendance/check-in', ['employee_id' => $this->employee->id])->json('data.id');
+
+        $this->travelTo(now()->setTime($outHour, $outMinute));
+
+        return $this->postJson("/api/auth/attendance/{$id}/check-out")->assertOk()->json('data.worked_minutes');
+    }
+
     public function test_a_short_day_becomes_a_half_day(): void
     {
         $this->travelTo(now()->setTime(9, 0));

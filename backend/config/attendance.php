@@ -20,6 +20,21 @@ return [
         'break_minutes' => (int) env('ATTENDANCE_BREAK_MINUTES', 60),
     ],
 
+    /*
+    | How long somebody has to be present before the shift's unpaid break is
+    | deducted at all.
+    |
+    | Without this, a four minute presence had a sixty minute break taken off
+    | it and recorded zero. Nobody takes an hour's break inside four minutes.
+    |
+    | The deduction also never pushes a day below this figure, so it fades in
+    | rather than dropping off a cliff: at six hours present you are credited
+    | six, at seven you are still credited six, and only past seven does the
+    | full hour come off. Otherwise a longer day could be worth less than a
+    | shorter one.
+    */
+    'break_after_minutes' => (int) env('ATTENDANCE_BREAK_AFTER_MINUTES', 360),
+
     /** Below this many worked minutes the day counts as a half day. */
     'half_day_threshold_minutes' => (int) env('ATTENDANCE_HALF_DAY_MINUTES', 240),
 
