@@ -1,12 +1,13 @@
 "use client"
 
-import { Bell, BriefcaseBusiness, CalendarCheck, CalendarDays, CheckSquare, ChevronDown, ClipboardList, DollarSign, FolderKanban, LayoutDashboard, LogOut, Menu, Moon, Receipt, Settings, Sun, Users, Wrench, X } from "lucide-react"
+import { BriefcaseBusiness, CalendarCheck, CalendarDays, CheckSquare, ChevronDown, ClipboardList, DollarSign, FolderKanban, LayoutDashboard, LogOut, Menu, Moon, Receipt, Settings, Sun, Users, Wrench, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { useTheme } from "next-themes"
 import { Button } from "@workspace/ui/components/button"
 import { BrandMark } from "@/components/brand-mark"
+import { NotificationBell } from "@/features/app/notification-bell"
 import { ProtectedRoute } from "@/features/auth/route-guards"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useAuthStore } from "@/store/auth-store"
@@ -100,7 +101,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <Button variant="ghost" size="icon-sm" aria-label="Toggle theme" onPress={() => setTheme(theme === "dark" ? "light" : "dark")}>
               {theme === "dark" ? <Sun /> : <Moon />}
             </Button>
-            <Button variant="ghost" size="icon-sm" aria-label="Notifications"><Bell /></Button>
+            <NotificationBell />
             <div className="relative">
               <Button variant="ghost" className="gap-2" onPress={() => setMenuOpen((value) => !value)}>
                 <span className="grid size-7 place-items-center rounded-full bg-primary text-xs text-primary-foreground">{user?.name.slice(0, 1).toUpperCase()}</span>
