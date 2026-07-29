@@ -127,6 +127,53 @@ final class PermissionRegistry
         return $granted;
     }
 
+    /**
+     * The actions that actually mean something on each module.
+     *
+     * Every module × action pair is registered as a gate, because that is
+     * cheap and keeps the check uniform. Offering all of them in an interface
+     * is not: nobody needs announcements.pay or assets.generate, and a grid
+     * full of impossible combinations is harder to read than a short one.
+     *
+     * @return list<Action>
+     */
+    public static function actionsFor(Module $module): array
+    {
+        $read = [Action::View, Action::ViewAll];
+        $write = [Action::Create, Action::Edit, Action::Delete];
+
+        return match ($module) {
+            Module::Employees => [...$read, ...$write, Action::Assign, Action::Export],
+            Module::Attendance => [...$read, Action::Create, Action::Edit, Action::Export],
+            Module::Leave => [...$read, ...$write, Action::Approve, Action::Export],
+            Module::Payroll => [
+                ...$read, ...$write, Action::Generate, Action::Approve,
+                Action::Pay, Action::Download, Action::Export,
+            ],
+            Module::Expenses => [...$read, ...$write, Action::Approve, Action::Export],
+            Module::Tasks, Module::Meetings => [...$read, ...$write, Action::Assign, Action::Comment, Action::Upload],
+            Module::Projects => [...$read, ...$write, Action::Assign],
+            Module::Recruitment, Module::Assets, Module::Announcements => [...$read, ...$write],
+            Module::Performance => [...$read, Action::Create, Action::Edit],
+            Module::Reports => [...$read, Action::Export],
+            Module::Attachments => [...$read, Action::Upload, Action::Delete],
+            Module::Activity => [...$read],
+        };
+    }
+
+    /**
+     * The whole grid an interface can offer, module by module.
+     *
+     * @return list<array{module: string, actions: list<string>}>
+     */
+    public static function grid(): array
+    {
+        return array_map(fn (Module $module) => [
+            'module' => $module->value,
+            'actions' => array_map(fn (Action $action) => $action->value, self::actionsFor($module)),
+        ], Module::cases());
+    }
+
     /** Every permission the system defines, used to register gates. */
     public static function all(): array
     {

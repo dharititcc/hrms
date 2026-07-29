@@ -21,6 +21,7 @@ export function usePermissions() {
   })
 
   return {
+    data,
     role: data?.role,
     isWorkspaceOwner: data?.is_workspace_owner ?? false,
     employeeId: data?.employee_id ?? null,

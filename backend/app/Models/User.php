@@ -35,6 +35,9 @@ class User extends Authenticatable implements MustVerifyEmail
 
     private ?int $employeeIdCache = null;
 
+    /** @var list<string>|null */
+    private ?array $permissionCache = null;
+
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification());
@@ -110,7 +113,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Resource-scoped check: may this user perform $action on $module? */
     public function hasPermission(Module $module, Action $action): bool
     {
-        return PermissionRegistry::allows($this->workspaceRole(), $module, $action);
+        return in_array("{$module->value}.{$action->value}", $this->permissions(), strict: true);
     }
 
     public function isWorkspaceAdmin(): bool
@@ -118,10 +121,38 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->workspaceRole() === WorkspaceRole::Admin;
     }
 
-    /** @return list<string> flat "module.action" permissions */
+    /**
+     * What this user may actually do: their role, adjusted by any per-employee
+     * overrides recorded against them.
+     *
+     * Memoized because it is consulted on nearly every request, often several
+     * times, and the overrides are a database read.
+     *
+     * @return list<string> flat "module.action" permissions
+     */
     public function permissions(): array
     {
-        return PermissionRegistry::permissionsFor($this->workspaceRole());
+        if ($this->permissionCache !== null) {
+            return $this->permissionCache;
+        }
+
+        $granted = PermissionRegistry::permissionsFor($this->workspaceRole());
+        $employeeId = $this->employeeId();
+
+        if ($employeeId === null) {
+            // The workspace owner has no employee record, so nothing can be
+            // taken away from them.
+            return $this->permissionCache = $granted;
+        }
+
+        $overrides = EmployeePermissionOverride::query()
+            ->where('staff_id', $employeeId)
+            ->pluck('granted', 'permission');
+
+        $granted = array_diff($granted, $overrides->reject(fn ($on) => $on)->keys()->all());
+        $granted = [...$granted, ...$overrides->filter(fn ($on) => $on)->keys()->all()];
+
+        return $this->permissionCache = array_values(array_unique($granted));
     }
 
     public function isWorkspaceOwner(): bool
@@ -134,6 +165,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $this->workspaceOwnerIdCache = null;
         $this->workspaceRoleCache = null;
+        $this->employeeIdCache = null;
+        // Permissions derive from both, so they cannot outlive either.
+        $this->permissionCache = null;
     }
 
     /**

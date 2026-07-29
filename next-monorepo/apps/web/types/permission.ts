@@ -28,4 +28,8 @@ export type WorkspacePermissions = {
   permissions: Permission[]
   modules: PermissionModule[]
   actions: PermissionAction[]
+  /** Only the actions that mean something on each module. */
+  grid: { module: PermissionModule; actions: PermissionAction[] }[]
+  /** What each role grants before any per-employee adjustment. */
+  role_defaults: Record<string, Permission[]>
 }

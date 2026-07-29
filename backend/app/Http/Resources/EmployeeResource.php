@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\EmployeePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,6 +21,14 @@ class EmployeeResource extends JsonResource
 
             // The office they normally work from. Null for remote and field
             // workers, and wherever no office has been defined yet.
+            /*
+            | What this person may actually do, role adjusted by any overrides
+            | recorded against them, and how many of those there are so the
+            | list can show that somebody differs from their role.
+            */
+            'permissions' => app(EmployeePermissionService::class)->effectiveFor($this->resource),
+            'permission_overrides' => $this->permissionOverrides()->count(),
+
             'attendance_location_id' => $this->attendance_location_id,
             'office_name' => $this->whenLoaded('office', fn () => $this->office?->name),
             // Whether this employee has a login account, and can therefore

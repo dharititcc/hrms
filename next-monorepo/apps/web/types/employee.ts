@@ -1,3 +1,5 @@
+import type { Permission } from "@/types/permission"
+
 export type EmployeeRole = "admin" | "manager" | "employee"
 export type EmployeeStatus = "active" | "inactive"
 
@@ -12,6 +14,10 @@ export type Employee = {
   attendance_location_id: number | null
   office_name?: string | null
   /** True once invited and linked to a login account. */
+  /** What this person may actually do, role adjusted by any overrides. */
+  permissions?: Permission[]
+  /** How many of those depart from their role; zero for almost everybody. */
+  permission_overrides?: number
   has_account: boolean
   created_at: string
   updated_at: string

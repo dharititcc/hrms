@@ -23,6 +23,11 @@ class UpdateEmployeeRequest extends StoreEmployeeRequest
             'role' => ['required', Rule::enum(EmployeeRole::class)],
             'status' => ['required', Rule::enum(EmployeeStatus::class)],
 
+            // The complete set the employee should end up with; the service
+            // stores only where it differs from their role.
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'max:64'],
+
             // Scoped to the workspace, or an id from elsewhere could be attached.
             'attendance_location_id' => [
                 'nullable', 'integer',

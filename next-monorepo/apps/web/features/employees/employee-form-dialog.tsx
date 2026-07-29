@@ -1,13 +1,14 @@
 "use client"
 
 import { X } from "lucide-react"
-import { useEffect } from "react"
-import { Controller, useForm } from "react-hook-form"
+import { useEffect, useState } from "react"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@workspace/ui/components/button"
 import { FormField } from "@/components/ui/form-fields"
 import { SelectField } from "@/components/ui/select-field"
 import { StatusSwitch } from "@/components/ui/status-switch"
+import { PermissionGrid } from "@/features/employees/permission-grid"
 import { employeeSchema, type EmployeeFormValues } from "@/features/employees/schemas"
 import { useAttendanceLocations } from "@/hooks/use-attendance"
 import { useEmployeeMutations } from "@/hooks/use-employees"
@@ -36,9 +37,15 @@ function valuesFor(employee?: Employee | null): EmployeeFormValues {
 
 export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee | null; onClose: () => void }) {
   const { toast } = useToast()
-  const { can } = usePermissions()
+  const { can, data: permissionData } = usePermissions()
   const { create, update } = useEmployeeMutations()
   const editing = Boolean(employee)
+
+  // Only offered to somebody who can hand out access at all.
+  const canGrant = can("employees.assign")
+  const [permissions, setPermissions] = useState<Set<string> | null>(
+    employee ? new Set(employee.permissions ?? []) : null,
+  )
 
   // Offices are behind attendance.view, so somebody who cannot see them simply
   // does not get the field rather than getting an empty one.
@@ -53,6 +60,17 @@ export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee 
 
   useEffect(() => { reset(valuesFor(employee)) }, [reset, employee])
 
+  const role = useWatch({ control, name: "role" })
+  const roleDefaults = new Set(permissionData?.role_defaults?.[role] ?? [])
+
+  /*
+  | null means "follow the role", so an untouched employee tracks the role
+  | dropdown as it changes and sends nothing on save. The first tick fixes the
+  | set, because departing from the role was deliberate; Reset returns it to
+  | null and to following again.
+  */
+  const effective = permissions ?? roleDefaults
+
   const onSubmit = async (values: EmployeeFormValues) => {
     const input = {
       name: values.name,
@@ -62,6 +80,9 @@ export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee 
       status: values.status,
       // Empty means no office, which is right for remote and field workers.
       attendance_location_id: values.attendance_location_id ? Number(values.attendance_location_id) : null,
+      // Omitted entirely when untouched, so saving a name never rewrites
+      // somebody's access.
+      ...(canGrant && permissions !== null ? { permissions: [...permissions] } : {}),
     }
 
     try {
@@ -146,6 +167,15 @@ export function EmployeeFormDialog({ employee, onClose }: { employee?: Employee 
 
           {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
           {errors.status && <p className="text-xs text-destructive">{errors.status.message}</p>}
+
+          {canGrant && (
+            <PermissionGrid
+              role={role}
+              granted={effective}
+              roleDefaults={roleDefaults}
+              onChange={setPermissions}
+            />
+          )}
 
           <div className="mt-2 flex justify-end gap-2">
             <Button type="button" variant="outline" onPress={onClose}>Cancel</Button>

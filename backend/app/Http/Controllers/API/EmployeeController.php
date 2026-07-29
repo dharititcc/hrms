@@ -7,13 +7,17 @@ use App\Http\Requests\Employee\StoreEmployeeRequest;
 use App\Http\Requests\Employee\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
+use App\Services\EmployeePermissionService;
 use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
 {
-    public function __construct(private readonly EmployeeService $service) {}
+    public function __construct(
+        private readonly EmployeeService $service,
+        private readonly EmployeePermissionService $permissions,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -32,9 +36,10 @@ class EmployeeController extends Controller
     {
         $this->authorize('create', Employee::class);
 
-        return (new EmployeeResource($this->service->create($request->user()->workspaceOwnerId(), $request->validated())))
-            ->response()
-            ->setStatusCode(201);
+        $employee = $this->service->create($request->user()->workspaceOwnerId(), $request->safe()->except('permissions'));
+        $this->syncPermissions($request, $employee);
+
+        return (new EmployeeResource($employee->refresh()))->response()->setStatusCode(201);
     }
 
     public function show(Request $request, Employee $employee): EmployeeResource
@@ -48,7 +53,10 @@ class EmployeeController extends Controller
     {
         $this->authorize('update', $employee);
 
-        return new EmployeeResource($this->service->update($employee, $request->validated()));
+        $updated = $this->service->update($employee, $request->safe()->except('permissions'));
+        $this->syncPermissions($request, $updated);
+
+        return new EmployeeResource($updated->refresh());
     }
 
     public function destroy(Request $request, Employee $employee): JsonResponse
@@ -56,6 +64,21 @@ class EmployeeController extends Controller
         $this->authorize('delete', $employee);
         $this->service->delete($employee);
 
-        return response()->json(['message' => 'Employee member deleted.']);
+        return response()->json(['message' => 'Employee deleted.']);
+    }
+
+    /**
+     * Only touched when the caller sends a list.
+     *
+     * Omitting the key leaves access as it is, so a client that knows nothing
+     * about permissions cannot wipe somebody's overrides by saving a name.
+     */
+    private function syncPermissions(Request $request, Employee $employee): void
+    {
+        if (! $request->has('permissions')) {
+            return;
+        }
+
+        $this->permissions->sync($employee, $request->user(), (array) $request->input('permissions', []));
     }
 }

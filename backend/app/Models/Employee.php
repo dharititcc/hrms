@@ -4,10 +4,12 @@ namespace App\Models;
 
 use App\Enums\EmployeeRole;
 use App\Enums\EmployeeStatus;
+use App\Enums\WorkspaceRole;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
@@ -36,6 +38,18 @@ class Employee extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /** The workspace role this employee's role maps onto. */
+    public function workspaceRole(): WorkspaceRole
+    {
+        return WorkspaceRole::fromEmployeeRole($this->role);
+    }
+
+    /** Departures from what their role grants; empty for almost everybody. */
+    public function permissionOverrides(): HasMany
+    {
+        return $this->hasMany(EmployeePermissionOverride::class, 'staff_id');
     }
 
     /** The login account for this employee, once invited. */
